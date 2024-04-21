@@ -25,7 +25,7 @@ impl MasonImage {
 }
 
 impl MasonImage {
-    pub fn load(&mut self, ui: &mut Ui) -> TextureId {
+    pub fn load(&mut self, ui: &mut Ui) -> (TextureId, [usize; 2]) {
         let texture: &TextureHandle = self.texture.get_or_insert_with(|| {
             // Load the texture only once.
             ui.ctx().load_texture(
@@ -34,6 +34,6 @@ impl MasonImage {
                 TextureOptions::NEAREST
             )
         });
-        texture.id()
+        (texture.id(), texture.size())
     }
 }
