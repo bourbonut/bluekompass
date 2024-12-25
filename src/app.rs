@@ -1,8 +1,8 @@
 use super::image_loader::MasonImage;
-use eframe::egui::{self, Vec2};
-use egui_plot::{Plot, PlotImage, PlotPoint, PlotUi, Points};
+use eframe::egui;
+use egui_plot::{Plot, PlotImage, PlotPoint, PlotPoints, PlotUi, Points};
 
-use egui::{Context, Layout, TextureId};
+use egui::{Context, Layout, TextureId, Vec2};
 
 use egui_file::FileDialog;
 use std::path::{PathBuf, Path};
@@ -30,7 +30,7 @@ pub struct MasonApp {
     mode: Mode,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
-    points: Vec<[f64; 2]>,
+    points: Vec<PlotPoint>,
 }
 
 impl Default for MasonApp {
@@ -78,7 +78,7 @@ impl MasonApp {
         if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
             if response.contains_pointer() {
                 if let Some(pos) =  plot_ui.pointer_coordinate() {
-                    self.points.push([pos.x as f64, pos.y as f64])
+                    self.points.push(pos)
                 }
             }
         }
@@ -87,9 +87,10 @@ impl MasonApp {
     fn remove_point(&mut self, plot_ui: &mut PlotUi){
         if plot_ui.ctx().input(|i| i.pointer.secondary_pressed()) && self.points.len() > 0 {
             if let Some(pos) =  plot_ui.pointer_coordinate() {
+                let vpos = pos.to_vec2();
                 let (index, min) = self.points.iter()
                     .enumerate()
-                    .map(|(i, &p)| (i, (p[0] - pos.x) * (p[0] - pos.x) + (p[1] - pos.y) * (p[1] - pos.y)))
+                    .map(|(i, &p)| (i, (p.to_vec2() - vpos).length()))
                     .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
                     .unwrap();
                 if min < 10.0 {
@@ -101,7 +102,7 @@ impl MasonApp {
 
     fn draw_points(&mut self, plot_ui: &mut PlotUi){
         plot_ui.points(
-            Points::new(self.points.clone())
+            Points::new(PlotPoints::Owned(self.points.clone()))
                 .radius(10.0)
                 .filled(true)
                 .shape(egui_plot::MarkerShape::Cross)
