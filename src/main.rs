@@ -2,6 +2,7 @@
 
 mod app;
 mod image_loader;
+mod shapes;
 use self::app::MasonApp;
 use eframe;
 
