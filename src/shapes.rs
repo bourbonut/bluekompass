@@ -3,42 +3,73 @@ use egui_plot::{PlotPoint, PlotPoints, PlotUi, MarkerShape};
 use eframe::{egui, epaint};
 use egui::{remap, Vec2};
 
-pub trait Draw {
+
+trait Draw {
     fn draw(&self, plot_ui: &mut PlotUi);
+}
+
+trait Select {
+    fn select_from_point(&self, point: Vec2) -> bool;
 }
 
 #[derive(Debug)]
 struct Line {
     points: [PlotPoint; 2],
+    selected: bool,
+}
+
+impl Line {
+    pub fn new(points: [PlotPoint; 2]) -> Self {
+        Self { points, selected: false }
+    }
 }
 
 impl Draw for Line {
     fn draw(&self, plot_ui: &mut PlotUi) {
+        let color = if self.selected { epaint::Color32::GREEN } else { epaint::Color32::BLACK };
         plot_ui.line(
             egui_plot::Line::new(PlotPoints::Owned(self.points.to_vec()))
-                .stroke(epaint::Stroke::new(3.0, epaint::Color32::BLACK))
+                .stroke(epaint::Stroke::new(3.0, color))
         );
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
                 .radius(10.0)
                 .filled(true)
                 .shape(MarkerShape::Circle)
-                .color(epaint::Color32::BLACK)
+                .color(color)
         );
+    }
+}
+
+impl Select for Line {
+    fn select_from_point(&self, _point: Vec2) -> bool {
+        // TODO: complete this trait
+        let vectors = self.points.map(|p| p.to_vec2());
+        let _p1 = vectors[0];
+        let _p2 = vectors[1];
+
+        false
     }
 }
 
 #[derive(Debug)]
 struct Circle {
     points: [PlotPoint; 3],
-    center: Option<PlotPoint>,
+    center: PlotPoint,
     radius: f32,
+    selected: bool,
 }
 
 impl Circle {
-    fn compute_center(&self) -> PlotPoint {
+    pub fn new(points: [PlotPoint; 3]) -> Self {
+        let center = Circle::compute_center(&points);
+        let radius = Circle::compute_radius(&center.to_vec2(), &points[0].to_vec2());
+        Self { points, center, radius, selected: false }
+    }
+
+    fn compute_center(points: &[PlotPoint; 3]) -> PlotPoint {
         // TODO : Use Vec2 for simpler expressions and better readability
-        let vectors = self.points.map(|p| p.to_vec2());
+        let vectors = points.map(|p| p.to_vec2());
 
         let p1 = vectors[0];
         let p2 = vectors[2];
@@ -68,46 +99,51 @@ impl Circle {
         PlotPoint::new(cx, cy)
     }
 
-    fn compute_radius(&self, center: Vec2) -> f32 {
-        (center - self.points[0].to_vec2()).length()
-    }
-
-    fn set_center(&mut self, center: PlotPoint) {
-        self.center = Some(center);
-        self.radius = self.compute_radius(center.to_vec2());
+    fn compute_radius(center: &Vec2, circle_point: &Vec2) -> f32 {
+        (*center - *circle_point).length()
     }
 }
 
 impl Draw for Circle {
     fn draw(&self, plot_ui: &mut PlotUi) {
-        if let Some(center) = self.center {
-                let radius = self.radius as f64;
-                let n = 512;
-                plot_ui.line(
-                    egui_plot::Line::new(
-                        (0..n).map(
-                            |i| {
-                                let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
-                                [
-                                    radius * t.cos() + center.x,
-                                    radius * t.sin() + center.y,
-                                ]
-                            }
-                        ).collect::<PlotPoints>()
-                    ).stroke(epaint::Stroke::new(3.0, epaint::Color32::BLACK))
-                );
-                plot_ui.points(
-                    egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
-                        .radius(10.0)
-                        .filled(true)
-                        .shape(MarkerShape::Circle)
-                        .color(epaint::Color32::BLACK)
-                );
-            }
-        }
+        let color = if self.selected { epaint::Color32::GREEN } else { epaint::Color32::BLACK };
+        let radius = self.radius as f64;
+        let n = 512;
+        plot_ui.line(
+            egui_plot::Line::new(
+                (0..n).map(
+                    |i| {
+                        let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
+                        [
+                            radius * t.cos() + self.center.x,
+                            radius * t.sin() + self.center.y,
+                        ]
+                    }
+                ).collect::<PlotPoints>()
+            ).stroke(epaint::Stroke::new(3.0, color))
+        );
+        plot_ui.points(
+            egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
+                .radius(10.0)
+                .filled(true)
+                .shape(MarkerShape::Circle)
+                .color(color)
+        );
+    }
 }
 
-#[allow(dead_code)]
+impl Select for Circle {
+    fn select_from_point(&self, _point: Vec2) -> bool {
+        // TODO: complete this trait
+        let vectors = self.points.map(|p| p.to_vec2());
+        let _p1 = vectors[0];
+        let _p2 = vectors[1];
+        let _p3 = vectors[2];
+
+        false
+    }
+}
+
 enum Shape {
     LINE(Line),
     CIRCLE(Circle),
