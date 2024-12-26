@@ -33,7 +33,14 @@ impl Draw for Line {
         );
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
-                .radius(10.0)
+                .radius(6.0)
+                .filled(true)
+                .shape(MarkerShape::Circle)
+                .color(epaint::Color32::WHITE)
+        );
+        plot_ui.points(
+            egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
+                .radius(5.0)
                 .filled(true)
                 .shape(MarkerShape::Circle)
                 .color(color)
@@ -124,7 +131,14 @@ impl Draw for Circle {
         );
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
-                .radius(10.0)
+                .radius(6.0)
+                .filled(true)
+                .shape(MarkerShape::Circle)
+                .color(epaint::Color32::WHITE)
+        );
+        plot_ui.points(
+            egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
+                .radius(5.0)
                 .filled(true)
                 .shape(MarkerShape::Circle)
                 .color(color)
@@ -144,7 +158,7 @@ impl Select for Circle {
     }
 }
 
-enum Shape {
-    LINE(Line),
-    CIRCLE(Circle),
+pub enum Shape {
+    Line(Line),
+    Circle(Circle),
 }

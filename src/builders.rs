@@ -4,23 +4,27 @@ use egui_plot;
 
 use crate::shapes::{Circle, Line, Draw};
 
-trait Build {
+pub trait Build {
     type Output;
 
     fn build(&self) -> Option<Self::Output>;
 }
 
-trait DrawWithPoint {
+pub trait DrawWithPoint {
     fn draw(&self, plot_ui: &mut PlotUi, current_point: PlotPoint);
 }
 
-#[derive(Debug)]
-struct LineBuilder {
+#[derive(Debug, PartialEq)]
+pub struct LineBuilder {
     p1: Option<PlotPoint>,
     p2: Option<PlotPoint>,
 }
 
 impl LineBuilder {
+    pub fn new() -> Self {
+        Self { p1: None, p2: None }
+    }
+
     pub fn set_point(&mut self, point: PlotPoint) {
         if self.p1.is_none() {
             self.p1 = Some(point);
@@ -52,14 +56,18 @@ impl DrawWithPoint for LineBuilder {
     }
 }
 
-#[derive(Debug)]
-struct CircleBuilder {
+#[derive(Debug, PartialEq)]
+pub struct CircleBuilder {
     p1: Option<PlotPoint>,
     p2: Option<PlotPoint>,
     p3: Option<PlotPoint>,
 }
 
 impl CircleBuilder {
+    pub fn new() -> Self {
+        Self { p1: None, p2: None, p3: None }
+    }
+
     pub fn set_point(&mut self, point: PlotPoint) {
         if self.p1.is_none() {
             self.p1 = Some(point);
@@ -94,13 +102,42 @@ impl DrawWithPoint for CircleBuilder {
                 circle.draw(plot_ui);
             } else {
                 plot_ui.points(
-                    egui_plot::Points::new(PlotPoints::Owned(vec![p1]))
-                        .radius(10.0)
+                    egui_plot::Points::new(PlotPoints::Owned(vec![p1, current_point]))
+                        .radius(6.0)
+                        .filled(true)
+                        .shape(MarkerShape::Circle)
+                        .color(epaint::Color32::WHITE)
+                );
+                plot_ui.points(
+                    egui_plot::Points::new(PlotPoints::Owned(vec![p1, current_point]))
+                        .radius(5.0)
                         .filled(true)
                         .shape(MarkerShape::Circle)
                         .color(epaint::Color32::BLACK)
                 );
             }
+        } else {
+            plot_ui.points(
+                egui_plot::Points::new(PlotPoints::Owned(vec![current_point]))
+                    .radius(6.0)
+                    .filled(true)
+                    .shape(MarkerShape::Circle)
+                    .color(epaint::Color32::WHITE)
+            );
+            plot_ui.points(
+                egui_plot::Points::new(PlotPoints::Owned(vec![current_point]))
+                    .radius(5.0)
+                    .filled(true)
+                    .shape(MarkerShape::Circle)
+                    .color(epaint::Color32::BLACK)
+            );
         }
     }
+}
+
+#[derive(PartialEq)]
+pub enum Builder {
+    NoneBuilder,
+    Line(LineBuilder),
+    Circle(CircleBuilder),
 }
