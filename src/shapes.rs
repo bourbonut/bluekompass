@@ -4,7 +4,7 @@ use eframe::{egui, epaint};
 use egui::{remap, Vec2};
 
 
-trait Draw {
+pub trait Draw {
     fn draw(&self, plot_ui: &mut PlotUi);
 }
 
@@ -13,7 +13,7 @@ trait Select {
 }
 
 #[derive(Debug)]
-struct Line {
+pub struct Line {
     points: [PlotPoint; 2],
     selected: bool,
 }
@@ -53,7 +53,7 @@ impl Select for Line {
 }
 
 #[derive(Debug)]
-struct Circle {
+pub struct Circle {
     points: [PlotPoint; 3],
     center: PlotPoint,
     radius: f32,
