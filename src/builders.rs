@@ -99,38 +99,24 @@ impl DrawWithPoint for CircleBuilder {
         if let Some(p1) = self.p1 {
             if let Some(p2) = self.p2 {
                 let circle = Circle::new([p1, p2, current_point]);
+                //println!("Partial circle: {:?}", circle);
                 circle.draw(plot_ui);
             } else {
                 plot_ui.points(
-                    egui_plot::Points::new(PlotPoints::Owned(vec![p1, current_point]))
+                    egui_plot::Points::new(PlotPoints::Owned(vec![p1]))
                         .radius(6.0)
                         .filled(true)
                         .shape(MarkerShape::Circle)
                         .color(epaint::Color32::WHITE)
                 );
                 plot_ui.points(
-                    egui_plot::Points::new(PlotPoints::Owned(vec![p1, current_point]))
+                    egui_plot::Points::new(PlotPoints::Owned(vec![p1]))
                         .radius(5.0)
                         .filled(true)
                         .shape(MarkerShape::Circle)
                         .color(epaint::Color32::BLACK)
                 );
             }
-        } else {
-            plot_ui.points(
-                egui_plot::Points::new(PlotPoints::Owned(vec![current_point]))
-                    .radius(6.0)
-                    .filled(true)
-                    .shape(MarkerShape::Circle)
-                    .color(epaint::Color32::WHITE)
-            );
-            plot_ui.points(
-                egui_plot::Points::new(PlotPoints::Owned(vec![current_point]))
-                    .radius(5.0)
-                    .filled(true)
-                    .shape(MarkerShape::Circle)
-                    .color(epaint::Color32::BLACK)
-            );
         }
     }
 }

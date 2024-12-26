@@ -79,7 +79,7 @@ impl Circle {
         let vectors = points.map(|p| p.to_vec2());
 
         let p1 = vectors[0];
-        let p2 = vectors[2];
+        let p2 = vectors[1];
         let p3 = vectors[2];
 
         let x1 = p1.x;
@@ -118,7 +118,7 @@ impl Draw for Circle {
         let n = 512;
         plot_ui.line(
             egui_plot::Line::new(
-                (0..n).map(
+                (0..=n).map(
                     |i| {
                         let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
                         [

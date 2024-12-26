@@ -100,7 +100,7 @@ impl MasonApp {
                 } else if let Some(pos) = plot_ui.pointer_coordinate() {
                     if response.contains_pointer() {
                         line_builder.draw(plot_ui, pos);
-                        println!("Drawing line");
+                        //println!("Drawing line");
                     }
                 }
             }
@@ -128,7 +128,7 @@ impl MasonApp {
                 } else if let Some(pos) = plot_ui.pointer_coordinate() {
                     if response.contains_pointer() {
                         circle_builder.draw(plot_ui, pos);
-                        println!("Drawing circle");
+                        //println!("Drawing circle");
                     }
                 }
             }
