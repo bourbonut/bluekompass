@@ -13,13 +13,6 @@ fn compute_intersection_line_to_line(p1: &Vec2, d1: &Vec2, p2: &Vec2, d2: &Vec2)
     Some(k * *d1 + *p1)
 }
 
-pub fn compute_distance_point_to_line(p: &Vec2, a: &Vec2, d: &Vec2, k: Option<&f32>) -> f32 {
-    let ap = *p - *a;
-    let binding = ap.dot(*d);
-    let k = k.unwrap_or(&binding);
-    (k * k * d.length_sq() - &ap.length_sq()).sqrt()
-}
-
 pub fn compute_circle_center(points: &[PlotPoint; 3]) -> PlotPoint {
     let [a, b, c] = points.map(|p| p.to_vec2());
     let ab = b - a;

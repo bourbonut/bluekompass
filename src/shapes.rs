@@ -3,13 +3,13 @@ use egui_plot::{PlotPoint, PlotPoints, PlotUi, MarkerShape};
 use eframe::{egui, epaint};
 use egui::{remap, Vec2};
 
-use crate::maths::{compute_circle_center, compute_circle_radius, compute_distance_point_to_line};
+use crate::maths::{compute_circle_center, compute_circle_radius};
 
 pub trait Draw {
     fn draw(&self, plot_ui: &mut PlotUi);
 }
 
-trait Select {
+pub trait Select {
     fn select_from_point(&self, point: Vec2) -> bool;
 }
 
@@ -22,6 +22,10 @@ pub struct Line {
 impl Line {
     pub fn new(points: [PlotPoint; 2]) -> Self {
         Self { points, selected: false }
+    }
+
+    pub fn set_selected(&mut self) {
+        self.selected = true;
     }
 }
 
@@ -53,9 +57,11 @@ impl Select for Line {
     fn select_from_point(&self, point: Vec2) -> bool {
         let [a, b] = self.points.map(|p| p.to_vec2());
         let ab = b - a;
-        let k = (point - a).dot(ab);
-        if 0. <= k && k <= 1. {
-            let dist = compute_distance_point_to_line(&point, &a, &ab, Some(&k));
+        let ap = point - a;
+        let k = ap.dot(ab) / ab.length_sq();
+        if 0. <= k && k <= 1. { // point is between A and B
+            // Distance between a point and the line
+            let dist = (ap.length_sq() - k * k * ab.length_sq()).sqrt();
             return dist <= 10.;
         }
         false
@@ -75,6 +81,10 @@ impl Circle {
         let center = compute_circle_center(&points);
         let radius = compute_circle_radius(&center.to_vec2(), &points[0].to_vec2());
         Self { points, center, radius, selected: false }
+    }
+
+    pub fn set_selected(&mut self) {
+        self.selected = true;
     }
 }
 
@@ -114,14 +124,11 @@ impl Draw for Circle {
 }
 
 impl Select for Circle {
-    fn select_from_point(&self, _point: Vec2) -> bool {
-        // TODO: complete this trait
-        //let vectors = self.points.map(|p| p.to_vec2());
-        //let _p1 = vectors[0];
-        //let _p2 = vectors[1];
-        //let _p3 = vectors[2];
-
-        false
+    fn select_from_point(&self, point: Vec2) -> bool {
+        let radius2 = self.radius * self.radius;
+        // circle equation ^ 2 = radius ^ 2
+        // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        (((point - self.center.to_vec2()).length_sq() - radius2) / self.radius).abs() <= 10.
     }
 }
 

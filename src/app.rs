@@ -8,7 +8,7 @@ use egui_file::FileDialog;
 use std::path::{PathBuf, Path};
 use std::ffi::OsStr;
 
-use crate::shapes::{Draw, Shape};
+use crate::shapes::{Draw, Shape, Select};
 use crate::builders::{Build, Builder, CircleBuilder, DrawWithPoint, LineBuilder};
 
 #[derive(PartialEq)]
@@ -100,7 +100,6 @@ impl MasonApp {
                 } else if let Some(pos) = plot_ui.pointer_coordinate() {
                     if response.contains_pointer() {
                         line_builder.draw(plot_ui, pos);
-                        //println!("Drawing line");
                     }
                 }
             }
@@ -128,7 +127,6 @@ impl MasonApp {
                 } else if let Some(pos) = plot_ui.pointer_coordinate() {
                     if response.contains_pointer() {
                         circle_builder.draw(plot_ui, pos);
-                        //println!("Drawing circle");
                     }
                 }
             }
@@ -143,6 +141,30 @@ impl MasonApp {
             match shape {
                 Shape::Line(line) => line.draw(plot_ui),
                 Shape::Circle(circle) => circle.draw(plot_ui),
+            }
+        }
+    }
+
+    fn select(&mut self, plot_ui: &mut PlotUi) {
+        let response = plot_ui.response();
+        if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
+            if response.contains_pointer() {
+                if let Some(pos) = plot_ui.pointer_coordinate() {
+                    for shape in &mut self.shapes {
+                        match shape {
+                            Shape::Line(line) => {
+                                if line.select_from_point(pos.to_vec2()) {
+                                    line.set_selected();
+                                }
+                            },
+                            Shape::Circle(circle) => {
+                                if circle.select_from_point(pos.to_vec2()) {
+                                    circle.set_selected();
+                                }
+                            },
+                        }
+                    }
+                }
             }
         }
     }
@@ -217,9 +239,9 @@ impl eframe::App for MasonApp {
                     self.draw_image(plot_ui, image_id, size);
 
                     match self.mode {
+                        Mode::SELECTION => self.select(plot_ui),
                         Mode::LINE => self.line(plot_ui),
                         Mode::CIRCLE => self.circle(plot_ui),
-                        _ => (),
                     }
 
                     self.draw(plot_ui);
