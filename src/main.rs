@@ -4,6 +4,7 @@ mod app;
 mod image_loader;
 mod shapes;
 mod builders;
+mod maths;
 use self::app::MasonApp;
 use eframe;
 
