@@ -1,6 +1,6 @@
 use super::image_loader::MasonImage;
 use eframe::egui;
-use egui_plot::{Plot, PlotImage, PlotPoint, PlotUi};
+use egui_plot::{Plot, PlotBounds, PlotImage, PlotPoint, PlotUi};
 
 use egui::{Context, Layout, TextureId, Vec2};
 
@@ -33,6 +33,7 @@ pub struct MasonApp {
     open_file_dialog: Option<FileDialog>,
     current_builder: Builder,
     shapes: Vec<Shape>,
+    plot_bounds: PlotBounds,
 }
 
 impl Default for MasonApp {
@@ -44,6 +45,7 @@ impl Default for MasonApp {
             open_file_dialog: None,
             current_builder: Builder::NoneBuilder,
             shapes: Vec::default(),
+            plot_bounds: PlotBounds::from_min_max([0., 0.], [0., 0.]),
         }
     }
 }
@@ -110,6 +112,7 @@ impl MasonApp {
     }
 
     fn circle(&mut self, plot_ui: &mut PlotUi) {
+        self.plot_bounds = plot_ui.plot_bounds();
         match &mut self.current_builder {
             Builder::Circle(circle_builder) => {
                 let response = plot_ui.response();
@@ -134,6 +137,7 @@ impl MasonApp {
                 self.current_builder = Builder::Circle(CircleBuilder::new());
             }
         }
+        plot_ui.set_plot_bounds(self.plot_bounds);
     }
 
     fn draw(&mut self, plot_ui: &mut PlotUi) {
@@ -228,15 +232,16 @@ impl eframe::App for MasonApp {
             self.refresh_image(ctx);
 
             if let Some(image) = &mut self.image {
+                let (image_id, size) = image.load(ui);
                 let mut plot = Plot::new("Mason Plot")
                     .show_axes(false)
                     .show_x(false)
                     .show_y(false)
                     .show_grid(false);
-                let (image_id, size) = image.load(ui);
                 plot = plot.data_aspect(1.0);
                 plot.show(ui, |plot_ui| {
                     self.draw_image(plot_ui, image_id, size);
+
 
                     match self.mode {
                         Mode::SELECTION => self.select(plot_ui),
