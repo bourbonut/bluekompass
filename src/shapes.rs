@@ -13,6 +13,10 @@ pub trait Select {
     fn select_from_point(&self, point: Vec2) -> bool;
 }
 
+pub trait Shape: Draw + Select {
+    fn set_selected(&mut self);
+}
+
 #[derive(Debug)]
 pub struct Line {
     points: [PlotPoint; 2],
@@ -23,8 +27,10 @@ impl Line {
     pub fn new(points: [PlotPoint; 2]) -> Self {
         Self { points, selected: false }
     }
+}
 
-    pub fn set_selected(&mut self) {
+impl Shape for Line {
+    fn set_selected(&mut self) {
         self.selected = true;
     }
 }
@@ -82,8 +88,10 @@ impl Circle {
         let radius = compute_circle_radius(&center.to_vec2(), &points[0].to_vec2());
         Self { points, center, radius, selected: false }
     }
+}
 
-    pub fn set_selected(&mut self) {
+impl Shape for Circle {
+    fn set_selected(&mut self) {
         self.selected = true;
     }
 }
@@ -130,9 +138,4 @@ impl Select for Circle {
         // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         (((point - self.center.to_vec2()).length_sq() - radius2) / self.radius).abs() <= 10.
     }
-}
-
-pub enum Shape {
-    Line(Line),
-    Circle(Circle),
 }

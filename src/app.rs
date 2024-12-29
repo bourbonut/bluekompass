@@ -8,7 +8,7 @@ use egui_file::FileDialog;
 use std::path::{PathBuf, Path};
 use std::ffi::OsStr;
 
-use crate::shapes::{Draw, Shape, Select};
+use crate::shapes::Shape;
 use crate::builders::{Build, Builder, CircleBuilder, DrawWithPoint, LineBuilder};
 
 #[derive(PartialEq)]
@@ -32,7 +32,7 @@ pub struct MasonApp {
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
     current_builder: Builder,
-    shapes: Vec<Shape>,
+    shapes: Vec<Box<dyn Shape>>,
     plot_bounds: PlotBounds,
 }
 
@@ -93,7 +93,7 @@ impl MasonApp {
                         if let Some(pos) = plot_ui.pointer_coordinate() {
                             line_builder.set_point(pos);
                             if let Some(line) = line_builder.build() {
-                                self.shapes.push(Shape::Line(line));
+                                self.shapes.push(Box::new(line));
                                 self.current_builder = Builder::Line(LineBuilder::new());
                                 println!("Shape line added");
                             } 
@@ -121,7 +121,7 @@ impl MasonApp {
                         if let Some(pos) = plot_ui.pointer_coordinate() {
                             circle_builder.set_point(pos);
                             if let Some(circle) = circle_builder.build() {
-                                self.shapes.push(Shape::Circle(circle));
+                                self.shapes.push(Box::new(circle));
                                 self.current_builder = Builder::Circle(CircleBuilder::new());
                                 println!("Shape circle added");
                             } 
@@ -142,10 +142,7 @@ impl MasonApp {
 
     fn draw(&mut self, plot_ui: &mut PlotUi) {
         for shape in &self.shapes {
-            match shape {
-                Shape::Line(line) => line.draw(plot_ui),
-                Shape::Circle(circle) => circle.draw(plot_ui),
-            }
+            shape.draw(plot_ui);
         }
     }
 
@@ -155,17 +152,8 @@ impl MasonApp {
             if response.contains_pointer() {
                 if let Some(pos) = plot_ui.pointer_coordinate() {
                     for shape in &mut self.shapes {
-                        match shape {
-                            Shape::Line(line) => {
-                                if line.select_from_point(pos.to_vec2()) {
-                                    line.set_selected();
-                                }
-                            },
-                            Shape::Circle(circle) => {
-                                if circle.select_from_point(pos.to_vec2()) {
-                                    circle.set_selected();
-                                }
-                            },
+                        if shape.select_from_point(pos.to_vec2()) {
+                            shape.set_selected();
                         }
                     }
                 }
