@@ -1,4 +1,4 @@
-use super::image_loader::MasonImage;
+use super::image_loader::BlueKompassImage;
 use eframe::egui;
 use egui_plot::{Plot, PlotBounds, PlotImage, PlotPoint, PlotUi};
 
@@ -26,8 +26,8 @@ const MODES: [(Mode, &str); 3] = [
     //(Mode::SPLINE, "Spline"),
 ];
 
-pub struct MasonApp {
-    image: Option<MasonImage>,
+pub struct BlueKompassApp {
+    image: Option<BlueKompassImage>,
     mode: Mode,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
@@ -36,7 +36,7 @@ pub struct MasonApp {
     plot_bounds: PlotBounds,
 }
 
-impl Default for MasonApp {
+impl Default for BlueKompassApp {
     fn default() -> Self {
         Self {
             image: None,
@@ -50,7 +50,7 @@ impl Default for MasonApp {
     }
 }
 
-impl MasonApp {
+impl BlueKompassApp {
     fn open_image(&mut self) {
         // Show only files with the extension "png".
         let filter = Box::new({
@@ -68,7 +68,7 @@ impl MasonApp {
             if dialog.show(ctx).selected() {
                 if let Some(file) = dialog.path() {
                     self.opened_file = Some(file.to_path_buf());
-                    self.image = Some(MasonImage::new(file.to_path_buf()))
+                    self.image = Some(BlueKompassImage::new(file.to_path_buf()))
                 }
             }
         }
@@ -199,7 +199,7 @@ impl MasonApp {
     //}
 }
 
-impl eframe::App for MasonApp {
+impl eframe::App for BlueKompassApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(Layout::left_to_right(Layout::default().horizontal_align()), |ui|{
@@ -221,7 +221,7 @@ impl eframe::App for MasonApp {
 
             if let Some(image) = &mut self.image {
                 let (image_id, size) = image.load(ui);
-                let mut plot = Plot::new("Mason Plot")
+                let mut plot = Plot::new("BlueKompass Plot")
                     .show_axes(false)
                     .show_x(false)
                     .show_y(false)

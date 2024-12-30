@@ -10,18 +10,18 @@ fn load_image_from_path(path: &Path) -> Result<ColorImage, ImageError> {
     Ok(ColorImage::from_rgba_unmultiplied(size, pixels.as_slice()))
 }
 
-pub struct MasonImage {
+pub struct BlueKompassImage {
     image_path: Box<Path>,
     texture: Option<TextureHandle>,
 }
 
-impl MasonImage {
+impl BlueKompassImage {
     pub fn new(image_path: PathBuf) -> Self {
         Self { texture: None, image_path: image_path.into() }
     }
 }
 
-impl MasonImage {
+impl BlueKompassImage {
     pub fn load(&mut self, ui: &mut Ui) -> (TextureId, [usize; 2]) {
         let texture: &TextureHandle = self.texture.get_or_insert_with(|| {
             // Load the texture only once.

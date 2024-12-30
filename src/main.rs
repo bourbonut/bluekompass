@@ -5,12 +5,12 @@ mod image_loader;
 mod shapes;
 mod builders;
 mod maths;
-use self::app::MasonApp;
+use self::app::BlueKompassApp;
 use eframe;
 
 fn main() -> Result<(), eframe::Error> {
     // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    let icon = include_bytes!("../assets/mason.png");
+    let icon = include_bytes!("../assets/bluekompass.png");
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default().with_icon(
             eframe::icon_data::from_png_bytes(&icon[..]).unwrap()
@@ -18,11 +18,11 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "Mason Application",
+        "BlueKompass Application",
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::<MasonApp>::default()
+            Box::<BlueKompassApp>::default()
         }),
     )
 }
