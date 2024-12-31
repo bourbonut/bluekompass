@@ -152,43 +152,6 @@ impl BlueKompassApp {
             }
         }
     }
-
-    // Old code to add, remove and draw points
-    //fn add_point(&mut self, plot_ui: &mut PlotUi){
-    //    let response = plot_ui.response();
-    //    if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-    //        if response.contains_pointer() {
-    //            if let Some(pos) =  plot_ui.pointer_coordinate() {
-    //                self.points.push(pos)
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //fn remove_point(&mut self, plot_ui: &mut PlotUi){
-    //    if plot_ui.ctx().input(|i| i.pointer.secondary_pressed()) && self.points.len() > 0 {
-    //        if let Some(pos) =  plot_ui.pointer_coordinate() {
-    //            let vpos = pos.to_vec2();
-    //            let (index, min) = self.points.iter()
-    //                .enumerate()
-    //                .map(|(i, &p)| (i, (p.to_vec2() - vpos).length()))
-    //                .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
-    //                .unwrap();
-    //            if min < 10.0 {
-    //                self.points.remove(index);
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //fn draw_points(&mut self, plot_ui: &mut PlotUi){
-    //    plot_ui.points(
-    //        Points::new(PlotPoints::Owned(self.points.clone()))
-    //            .radius(10.0)
-    //            .filled(true)
-    //            .shape(egui_plot::MarkerShape::Cross)
-    //    );
-    //}
 }
 
 impl eframe::App for BlueKompassApp {
@@ -234,21 +197,6 @@ impl eframe::App for BlueKompassApp {
                     }
 
                     self.draw(plot_ui);
-
-                    // Old code to add, remove and draw points
-                    //self.draw_points(plot_ui);
-                    //
-                    //if self.mode == Mode::POINT {
-                    //    self.add_point(plot_ui);
-                    //    self.remove_point(plot_ui);
-                    //}
-
-                    // if let Some(coord) = plot_ui.pointer_coordinate() {
-                    //     dbg!(
-                    //         plot_ui.screen_from_plot(coord)
-                    //     );
-                    // }
-                    // dbg!(plot_ui.response());
                 });
             }
         });
