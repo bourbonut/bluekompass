@@ -1,3 +1,4 @@
+use core::f32;
 use std::f64::consts::TAU;
 use egui_plot::{PlotPoint, PlotPoints, PlotUi, MarkerShape};
 use eframe::{egui, epaint};
@@ -10,11 +11,12 @@ pub trait Draw {
 }
 
 pub trait Select {
-    fn select_from_point(&self, point: Vec2) -> bool;
+    fn select_from_point(&self, point: Vec2) -> f32;
 }
 
 pub trait Shape: Draw + Select {
-    fn set_selected(&mut self);
+    fn select(&mut self);
+    fn unselect(&mut self);
 }
 
 #[derive(Debug)]
@@ -30,8 +32,12 @@ impl Line {
 }
 
 impl Shape for Line {
-    fn set_selected(&mut self) {
+    fn select(&mut self) {
         self.selected = true;
+    }
+
+    fn unselect(&mut self) {
+        self.selected = false;
     }
 }
 
@@ -60,17 +66,16 @@ impl Draw for Line {
 }
 
 impl Select for Line {
-    fn select_from_point(&self, point: Vec2) -> bool {
+    fn select_from_point(&self, point: Vec2) -> f32 {
         let [a, b] = self.points.map(|p| p.to_vec2());
         let ab = b - a;
         let ap = point - a;
         let k = ap.dot(ab) / ab.length_sq();
         if 0. <= k && k <= 1. { // point is between A and B
             // Distance between a point and the line
-            let dist = (ap.length_sq() - k * k * ab.length_sq()).sqrt();
-            return dist <= 10.;
+            return (ap.length_sq() - k * k * ab.length_sq()).sqrt();
         }
-        false
+        f32::INFINITY
     }
 }
 
@@ -91,8 +96,12 @@ impl Circle {
 }
 
 impl Shape for Circle {
-    fn set_selected(&mut self) {
+    fn select(&mut self) {
         self.selected = true;
+    }
+
+    fn unselect(&mut self) {
+        self.selected = false;
     }
 }
 
@@ -132,10 +141,10 @@ impl Draw for Circle {
 }
 
 impl Select for Circle {
-    fn select_from_point(&self, point: Vec2) -> bool {
+    fn select_from_point(&self, point: Vec2) -> f32 {
         let radius2 = self.radius * self.radius;
         // circle equation ^ 2 = radius ^ 2
         // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        (((point - self.center.to_vec2()).length_sq() - radius2) / self.radius).abs() <= 10.
+        (((point - self.center.to_vec2()).length_sq() - radius2) / self.radius).abs()
     }
 }

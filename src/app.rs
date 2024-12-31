@@ -7,6 +7,7 @@ use egui::{Context, Layout, TextureId, Vec2};
 use egui_file::FileDialog;
 use std::path::{PathBuf, Path};
 use std::ffi::OsStr;
+use std::cmp::Ordering;
 
 use crate::shapes::Shape;
 use crate::builders::{Builder, BuilderMode};
@@ -34,6 +35,7 @@ pub struct BlueKompassApp {
     builder: Builder,
     shapes: Vec<Box<dyn Shape>>,
     plot_bounds: PlotBounds,
+    last_selection: Option<usize>,
 }
 
 impl Default for BlueKompassApp {
@@ -46,6 +48,7 @@ impl Default for BlueKompassApp {
             builder: Builder::new(),
             shapes: Vec::default(),
             plot_bounds: PlotBounds::from_min_max([0., 0.], [0., 0.]),
+            last_selection: None,
         }
     }
 }
@@ -94,7 +97,6 @@ impl BlueKompassApp {
                     if let Some(shape) = self.builder.build() {
                         self.shapes.push(shape);
                         self.builder.reset();
-                        println!("Shape added");
                     } 
                 }
             }
@@ -111,15 +113,40 @@ impl BlueKompassApp {
         }
     }
 
+    fn unselect_shape(&mut self) {
+        if let Some(selection_index) = self.last_selection {
+            self.shapes[selection_index].unselect();
+            self.last_selection = None;
+        }
+    }
+
+    fn select_shape(&mut self, selection_index: usize) {
+        self.shapes[selection_index].select();
+        self.last_selection = Some(selection_index);
+    }
+
     fn select(&mut self, plot_ui: &mut PlotUi) {
         let response = plot_ui.response();
         if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
             if response.contains_pointer() {
                 if let Some(pos) = plot_ui.pointer_coordinate() {
-                    for shape in &mut self.shapes {
-                        if shape.select_from_point(pos.to_vec2()) {
-                            shape.set_selected();
+                    let pos = pos.to_vec2();
+                    let result = self.shapes.iter()
+                        .enumerate()
+                        .map(|(i, shape)| (i, shape.select_from_point(pos)))
+                        .min_by(
+                            |(_, score_a), (_, score_b)| {
+                                score_a.partial_cmp(&score_b)
+                                    .unwrap_or(Ordering::Equal)
+                            }
+                        );
+                    match result {
+                        Some((selection_index, score)) if score < 10. => {
+                            self.unselect_shape();
+                            self.select_shape(selection_index);
                         }
+                        Some(_) => self.unselect_shape(),
+                        None => (),
                     }
                 }
             }
