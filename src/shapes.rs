@@ -6,6 +6,8 @@ use egui::{remap, Vec2};
 
 use crate::maths::{compute_circle_center, compute_circle_radius};
 
+const BLUE: egui::Color32 = epaint::Color32::from_rgb(46, 101, 255);
+
 pub trait Draw {
     fn draw(&self, plot_ui: &mut PlotUi);
 }
@@ -43,11 +45,15 @@ impl Shape for Line {
 
 impl Draw for Line {
     fn draw(&self, plot_ui: &mut PlotUi) {
-        let color = if self.selected { epaint::Color32::GREEN } else { epaint::Color32::BLACK };
+        let color = if self.selected { BLUE } else { epaint::Color32::BLACK };
+
+        // Line
         plot_ui.line(
             egui_plot::Line::new(PlotPoints::Owned(self.points.to_vec()))
-                .stroke(epaint::Stroke::new(3.0, color))
+                .stroke(epaint::Stroke::new(3.0, epaint::Color32::BLACK))
         );
+
+        // Stroke color for points
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
                 .radius(6.0)
@@ -55,6 +61,8 @@ impl Draw for Line {
                 .shape(MarkerShape::Circle)
                 .color(epaint::Color32::WHITE)
         );
+
+        // Fill color for points
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
                 .radius(5.0)
@@ -107,9 +115,11 @@ impl Shape for Circle {
 
 impl Draw for Circle {
     fn draw(&self, plot_ui: &mut PlotUi) {
-        let color = if self.selected { epaint::Color32::GREEN } else { epaint::Color32::BLACK };
+        let color = if self.selected { BLUE } else { epaint::Color32::BLACK };
         let radius = self.radius as f64;
         let n = 512;
+
+        // Circle
         plot_ui.line(
             egui_plot::Line::new(
                 (0..=n).map(
@@ -121,8 +131,10 @@ impl Draw for Circle {
                         ]
                     }
                 ).collect::<PlotPoints>()
-            ).stroke(epaint::Stroke::new(3.0, color))
+            ).stroke(epaint::Stroke::new(3.0, epaint::Color32::BLACK))
         );
+
+        // Stroke color for points
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
                 .radius(6.0)
@@ -130,12 +142,23 @@ impl Draw for Circle {
                 .shape(MarkerShape::Circle)
                 .color(epaint::Color32::WHITE)
         );
+
+        // Fill color for points
         plot_ui.points(
             egui_plot::Points::new(PlotPoints::Owned(self.points.to_vec()))
                 .radius(5.0)
                 .filled(true)
                 .shape(MarkerShape::Circle)
                 .color(color)
+        );
+
+        // Center of circle
+        plot_ui.points(
+            egui_plot::Points::new(PlotPoints::Owned(vec![self.center]))
+                .radius(5.0)
+                .filled(true)
+                .shape(MarkerShape::Cross)
+                .color(epaint::Color32::BLACK)
         );
     }
 }
