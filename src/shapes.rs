@@ -19,6 +19,8 @@ pub trait Select {
 pub trait Shape: Draw + Select {
     fn select(&mut self);
     fn unselect(&mut self);
+    fn as_slice(&self) -> &[PlotPoint];
+    fn replace(&mut self, index: usize, point: PlotPoint);
 }
 
 #[derive(Debug)]
@@ -40,6 +42,14 @@ impl Shape for Line {
 
     fn unselect(&mut self) {
         self.selected = false;
+    }
+
+    fn as_slice(&self) -> &[PlotPoint] {
+        self.points.as_slice()
+    }
+
+    fn replace(&mut self, index: usize, point: PlotPoint) {
+        self.points[index] = point;
     }
 }
 
@@ -110,6 +120,16 @@ impl Shape for Circle {
 
     fn unselect(&mut self) {
         self.selected = false;
+    }
+
+    fn as_slice(&self) -> &[PlotPoint] {
+        self.points.as_slice()
+    }
+
+    fn replace(&mut self, index: usize, point: PlotPoint) {
+        self.points[index] = point;
+        self.center = compute_circle_center(&self.points);
+        self.radius = compute_circle_radius(&self.center.to_vec2(), &self.points[0].to_vec2());
     }
 }
 

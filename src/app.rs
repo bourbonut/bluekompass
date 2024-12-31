@@ -125,30 +125,75 @@ impl BlueKompassApp {
         self.last_selection = Some(selection_index);
     }
 
+    fn update_shape(&mut self, shape_index: usize, pos: PlotPoint) {
+        let shape = &mut self.shapes[shape_index];
+        let pos = pos.to_vec2();
+        let result = shape.as_slice()
+            .iter()
+            .enumerate()
+            .map(|(i, point)| (i, (point.to_vec2() - pos).length()))
+            .min_by(
+                |(_, r1), (_, r2)| {
+                    r1.partial_cmp(&r2)
+                        .unwrap_or(Ordering::Equal)
+                }
+            );
+        match result {
+            Some((point_index, radius)) if radius < 10. => {
+                shape.replace(point_index, PlotPoint::new(pos.x, pos.y));
+            }
+            _ => (),
+        }
+    }
+
+    fn move_selected_point(&mut self, plot_ui: &mut PlotUi) -> bool {
+        if let Some(selected_index) = self.last_selection {
+            let response = plot_ui.response();
+            if plot_ui.ctx().input(|i| i.pointer.primary_down()) {
+                match plot_ui.pointer_coordinate() {
+                    Some(pos) if response.contains_pointer() => {
+                        self.update_shape(selected_index, pos);
+                        return true;
+                    }
+                    _ => (),
+                }
+            } 
+        }
+        false
+    }
+
+    fn select_next_shape(&mut self, pos: PlotPoint) {
+        let pos = pos.to_vec2();
+        let result = self.shapes.iter()
+            .enumerate()
+            .map(|(i, shape)| (i, shape.select_from_point(pos)))
+            .min_by(
+                |(_, score_a), (_, score_b)| {
+                    score_a.partial_cmp(&score_b)
+                        .unwrap_or(Ordering::Equal)
+                }
+            );
+        match result {
+            Some((selection_index, score)) if score < 10. => {
+                self.unselect_shape();
+                self.select_shape(selection_index);
+            }
+            Some(_) => self.unselect_shape(),
+            None => (),
+        }
+    }
+
     fn select(&mut self, plot_ui: &mut PlotUi) {
+        if self.move_selected_point(plot_ui) {
+            return;
+        }
         let response = plot_ui.response();
         if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-            if response.contains_pointer() {
-                if let Some(pos) = plot_ui.pointer_coordinate() {
-                    let pos = pos.to_vec2();
-                    let result = self.shapes.iter()
-                        .enumerate()
-                        .map(|(i, shape)| (i, shape.select_from_point(pos)))
-                        .min_by(
-                            |(_, score_a), (_, score_b)| {
-                                score_a.partial_cmp(&score_b)
-                                    .unwrap_or(Ordering::Equal)
-                            }
-                        );
-                    match result {
-                        Some((selection_index, score)) if score < 10. => {
-                            self.unselect_shape();
-                            self.select_shape(selection_index);
-                        }
-                        Some(_) => self.unselect_shape(),
-                        None => (),
-                    }
+            match plot_ui.pointer_coordinate() {
+                Some(pos) if response.contains_pointer() => {
+                    self.select_next_shape(pos);
                 }
+                _ => (),
             }
         }
     }
@@ -176,12 +221,14 @@ impl eframe::App for BlueKompassApp {
 
             if let Some(image) = &mut self.image {
                 let (image_id, size) = image.load(ui);
-                let mut plot = Plot::new("BlueKompass Plot")
+                let plot = Plot::new("BlueKompass Plot")
+                    .data_aspect(1.0)
+                    .allow_drag(self.mode != Mode::SELECTION) // TODO: find a solution to remove
+                    // this line
                     .show_axes(false)
                     .show_x(false)
                     .show_y(false)
                     .show_grid(false);
-                plot = plot.data_aspect(1.0);
                 plot.show(ui, |plot_ui| {
                     self.draw_image(plot_ui, image_id, size);
 
