@@ -165,7 +165,7 @@ impl eframe::App for BlueKompassApp {
 
                 // Select mode with buttons
                 for (mode, button_text) in MODES {
-                    // ui.add(Button::image(Image::new(include_image!("../assets/mason.png"))));
+                    // ui.add(Button::image(Image::new(include_image!("../assets/bluekompass.png"))));
                     if ui.button(button_text).clicked() {
                         self.mode = mode;
                     }
