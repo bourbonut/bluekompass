@@ -35,7 +35,8 @@ pub struct BlueKompassApp {
     builder: Builder,
     shapes: Vec<Box<dyn Shape>>,
     plot_bounds: PlotBounds,
-    last_selection: Option<usize>,
+    selected_shape_index: Option<usize>,
+    selected_point_index: Option<usize>,
 }
 
 impl Default for BlueKompassApp {
@@ -48,7 +49,8 @@ impl Default for BlueKompassApp {
             builder: Builder::new(),
             shapes: Vec::default(),
             plot_bounds: PlotBounds::from_min_max([0., 0.], [0., 0.]),
-            last_selection: None,
+            selected_shape_index: None,
+            selected_point_index: None,
         }
     }
 }
@@ -114,40 +116,50 @@ impl BlueKompassApp {
     }
 
     fn unselect_shape(&mut self) {
-        if let Some(selection_index) = self.last_selection {
+        if let Some(selection_index) = self.selected_shape_index {
             self.shapes[selection_index].unselect();
-            self.last_selection = None;
+            self.selected_shape_index = None;
         }
     }
 
     fn select_shape(&mut self, selection_index: usize) {
         self.shapes[selection_index].select();
-        self.last_selection = Some(selection_index);
+        self.selected_shape_index = Some(selection_index);
+    }
+
+    fn select_point_from_shape(&mut self, shape_index: usize, pos: PlotPoint){
+        if self.selected_point_index.is_none() {
+            let pos = pos.to_vec2();
+            let shape = &self.shapes[shape_index];
+            let result = shape.as_slice()
+                .iter()
+                .enumerate()
+                .map(|(i, point)| (i, (point.to_vec2() - pos).length()))
+                .min_by(
+                    |(_, r1), (_, r2)| {
+                        r1.partial_cmp(&r2)
+                            .unwrap_or(Ordering::Equal)
+                    }
+                );   
+            match result {
+                Some((point_index, radius)) if radius < 10. => {
+                    self.selected_point_index = Some(point_index);
+                }
+                _ => (),
+            }
+        }
     }
 
     fn update_shape(&mut self, shape_index: usize, pos: PlotPoint) {
-        let shape = &mut self.shapes[shape_index];
-        let pos = pos.to_vec2();
-        let result = shape.as_slice()
-            .iter()
-            .enumerate()
-            .map(|(i, point)| (i, (point.to_vec2() - pos).length()))
-            .min_by(
-                |(_, r1), (_, r2)| {
-                    r1.partial_cmp(&r2)
-                        .unwrap_or(Ordering::Equal)
-                }
-            );
-        match result {
-            Some((point_index, radius)) if radius < 10. => {
-                shape.replace(point_index, PlotPoint::new(pos.x, pos.y));
-            }
-            _ => (),
+        self.select_point_from_shape(shape_index, pos);
+        if let Some(point_index) = self.selected_point_index {
+            let shape = &mut self.shapes[shape_index];
+            shape.replace(point_index, pos);
         }
     }
 
     fn move_selected_point(&mut self, plot_ui: &mut PlotUi) -> bool {
-        if let Some(selected_index) = self.last_selection {
+        if let Some(selected_index) = self.selected_shape_index {
             let response = plot_ui.response();
             if plot_ui.ctx().input(|i| i.pointer.primary_down()) {
                 match plot_ui.pointer_coordinate() {
@@ -157,7 +169,9 @@ impl BlueKompassApp {
                     }
                     _ => (),
                 }
-            } 
+            } else {
+                self.selected_point_index = None;
+            }
         }
         false
     }
