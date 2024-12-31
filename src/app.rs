@@ -14,13 +14,15 @@ use crate::builders::{Builder, BuilderMode};
 
 #[derive(PartialEq)]
 enum Mode {
+    DRAG,
     SELECTION,
     LINE,
     CIRCLE,
     //SPLINE,
 }
 
-const MODES: [(Mode, &str); 3] = [
+const MODES: [(Mode, &str); 4] = [
+    (Mode::DRAG, "Drag"),
     (Mode::SELECTION, "Selection"),
     (Mode::LINE, "Line"),
     (Mode::CIRCLE, "Circle"),
@@ -43,7 +45,7 @@ impl Default for BlueKompassApp {
     fn default() -> Self {
         Self {
             image: None,
-            mode: Mode::SELECTION,
+            mode: Mode::DRAG,
             opened_file: None,
             open_file_dialog: None,
             builder: Builder::new(),
@@ -90,6 +92,7 @@ impl BlueKompassApp {
     }
 
     fn build(&mut self, plot_ui: &mut PlotUi, builder_mode: BuilderMode) {
+        self.unselect_shape();
         self.builder.set_mode(builder_mode);
         let response = plot_ui.response();
         if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
@@ -248,6 +251,7 @@ impl eframe::App for BlueKompassApp {
 
 
                     match self.mode {
+                        Mode::DRAG => self.unselect_shape(),
                         Mode::SELECTION => self.select(plot_ui),
                         Mode::LINE => self.build(plot_ui, BuilderMode::Line),
                         Mode::CIRCLE => {
