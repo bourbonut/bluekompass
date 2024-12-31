@@ -9,7 +9,7 @@ use std::path::{PathBuf, Path};
 use std::ffi::OsStr;
 
 use crate::shapes::Shape;
-use crate::builders::{Build, Builder, CircleBuilder, DrawWithPoint, LineBuilder};
+use crate::builders::{Builder, BuilderMode};
 
 #[derive(PartialEq)]
 enum Mode {
@@ -31,7 +31,7 @@ pub struct BlueKompassApp {
     mode: Mode,
     opened_file: Option<PathBuf>,
     open_file_dialog: Option<FileDialog>,
-    current_builder: Builder,
+    builder: Builder,
     shapes: Vec<Box<dyn Shape>>,
     plot_bounds: PlotBounds,
 }
@@ -43,7 +43,7 @@ impl Default for BlueKompassApp {
             mode: Mode::SELECTION,
             opened_file: None,
             open_file_dialog: None,
-            current_builder: Builder::NoneBuilder,
+            builder: Builder::new(),
             shapes: Vec::default(),
             plot_bounds: PlotBounds::from_min_max([0., 0.], [0., 0.]),
         }
@@ -84,60 +84,25 @@ impl BlueKompassApp {
         );
     }
 
-    fn line(&mut self, plot_ui: &mut PlotUi) {
-        match &mut self.current_builder {
-            Builder::Line(line_builder) => {
-                let response = plot_ui.response();
-                if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-                    if response.contains_pointer() {
-                        if let Some(pos) = plot_ui.pointer_coordinate() {
-                            line_builder.set_point(pos);
-                            if let Some(line) = line_builder.build() {
-                                self.shapes.push(Box::new(line));
-                                self.current_builder = Builder::Line(LineBuilder::new());
-                                println!("Shape line added");
-                            } 
-                        }
-                    }
-                } else if let Some(pos) = plot_ui.pointer_coordinate() {
-                    if response.contains_pointer() {
-                        line_builder.draw(plot_ui, pos);
-                    }
+    fn build(&mut self, plot_ui: &mut PlotUi, builder_mode: BuilderMode) {
+        self.builder.set_mode(builder_mode);
+        let response = plot_ui.response();
+        if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
+            if response.contains_pointer() {
+                if let Some(pos) = plot_ui.pointer_coordinate() {
+                    self.builder.set_next_point(pos);
+                    if let Some(shape) = self.builder.build() {
+                        self.shapes.push(shape);
+                        self.builder.reset();
+                        println!("Shape added");
+                    } 
                 }
             }
-            _ => {
-                self.current_builder = Builder::Line(LineBuilder::new());
+        } else if let Some(pos) = plot_ui.pointer_coordinate() {
+            if response.contains_pointer() {
+                self.builder.draw(plot_ui, pos);
             }
         }
-    }
-
-    fn circle(&mut self, plot_ui: &mut PlotUi) {
-        self.plot_bounds = plot_ui.plot_bounds();
-        match &mut self.current_builder {
-            Builder::Circle(circle_builder) => {
-                let response = plot_ui.response();
-                if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-                    if response.contains_pointer() {
-                        if let Some(pos) = plot_ui.pointer_coordinate() {
-                            circle_builder.set_point(pos);
-                            if let Some(circle) = circle_builder.build() {
-                                self.shapes.push(Box::new(circle));
-                                self.current_builder = Builder::Circle(CircleBuilder::new());
-                                println!("Shape circle added");
-                            } 
-                        }
-                    }
-                } else if let Some(pos) = plot_ui.pointer_coordinate() {
-                    if response.contains_pointer() {
-                        circle_builder.draw(plot_ui, pos);
-                    }
-                }
-            }
-            _ => {
-                self.current_builder = Builder::Circle(CircleBuilder::new());
-            }
-        }
-        plot_ui.set_plot_bounds(self.plot_bounds);
     }
 
     fn draw(&mut self, plot_ui: &mut PlotUi) {
@@ -233,8 +198,12 @@ impl eframe::App for BlueKompassApp {
 
                     match self.mode {
                         Mode::SELECTION => self.select(plot_ui),
-                        Mode::LINE => self.line(plot_ui),
-                        Mode::CIRCLE => self.circle(plot_ui),
+                        Mode::LINE => self.build(plot_ui, BuilderMode::Line),
+                        Mode::CIRCLE => {
+                            self.plot_bounds = plot_ui.plot_bounds();
+                            self.build(plot_ui, BuilderMode::Circle);
+                            plot_ui.set_plot_bounds(self.plot_bounds);
+                        },
                     }
 
                     self.draw(plot_ui);
