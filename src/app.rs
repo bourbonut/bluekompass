@@ -64,6 +64,7 @@ impl Default for BlueKompassApp {
 impl eframe::App for BlueKompassApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            // Define layout
             ui.with_layout(Layout::left_to_right(Layout::default().horizontal_align()), |ui|{
                 // Add "Open" button to open images
                 if ui.button("Open").clicked() {
@@ -83,17 +84,17 @@ impl eframe::App for BlueKompassApp {
 
             if let Some(image) = &mut self.image {
                 let (image_id, size) = image.load(ui);
+
                 let plot = Plot::new("BlueKompass Plot")
                     .data_aspect(1.0)
-                    .allow_drag(self.mode != Mode::SELECTION) // TODO: find a solution to remove
-                    // this line
+                    .allow_drag(self.mode != Mode::SELECTION)
                     .show_axes(false)
                     .show_x(false)
                     .show_y(false)
                     .show_grid(false);
+
                 plot.show(ui, |plot_ui| {
                     self.draw_image(plot_ui, image_id, size);
-
 
                     match self.mode {
                         Mode::DRAG => self.unselect_shape(),
