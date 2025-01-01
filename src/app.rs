@@ -14,6 +14,7 @@ mod selection;
 mod build;
 mod image;
 mod draw;
+mod remove;
 
 #[derive(PartialEq)]
 enum Mode {
