@@ -5,6 +5,7 @@ use crate::builders::BuilderMode;
 
 impl BlueKompassApp {
     pub fn build(&mut self, plot_ui: &mut PlotUi, builder_mode: BuilderMode) {
+        self.plot_bounds = plot_ui.plot_bounds();
         self.unselect_shape();
         self.builder.set_mode(builder_mode);
         let response = plot_ui.response();
@@ -23,5 +24,6 @@ impl BlueKompassApp {
                 self.builder.draw(plot_ui, pos);
             }
         }
+        plot_ui.set_plot_bounds(self.plot_bounds);
     }
 }

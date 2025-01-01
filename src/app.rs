@@ -99,11 +99,7 @@ impl eframe::App for BlueKompassApp {
                         Mode::DRAG => self.unselect_shape(),
                         Mode::SELECTION => self.select(plot_ui),
                         Mode::LINE => self.build(plot_ui, BuilderMode::Line),
-                        Mode::CIRCLE => {
-                            self.plot_bounds = plot_ui.plot_bounds();
-                            self.build(plot_ui, BuilderMode::Circle);
-                            plot_ui.set_plot_bounds(self.plot_bounds);
-                        },
+                        Mode::CIRCLE => self.build(plot_ui, BuilderMode::Circle),
                     }
 
                     self.draw(plot_ui);
