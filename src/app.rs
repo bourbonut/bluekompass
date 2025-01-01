@@ -1,16 +1,19 @@
 use super::image_loader::BlueKompassImage;
 use eframe::egui;
-use egui_plot::{Plot, PlotBounds, PlotImage, PlotPoint, PlotUi};
+use egui_plot::{Plot, PlotBounds};
 
-use egui::{Context, Layout, TextureId, Vec2};
+use egui::Layout;
 
 use egui_file::FileDialog;
-use std::path::{PathBuf, Path};
-use std::ffi::OsStr;
-use std::cmp::Ordering;
+use std::path::PathBuf;
 
 use crate::shapes::Shape;
 use crate::builders::{Builder, BuilderMode};
+
+mod selection;
+mod build;
+mod image;
+mod draw;
 
 #[derive(PartialEq)]
 enum Mode {
@@ -53,184 +56,6 @@ impl Default for BlueKompassApp {
             plot_bounds: PlotBounds::from_min_max([0., 0.], [0., 0.]),
             selected_shape_index: None,
             selected_point_index: None,
-        }
-    }
-}
-
-impl BlueKompassApp {
-    fn open_image(&mut self) {
-        // Show only files with the extension "png".
-        let filter = Box::new({
-            let ext = Some(OsStr::new("png"));
-            move |path: &Path| -> bool { path.extension() == ext }
-        });
-        let mut dialog = FileDialog::open_file(self.opened_file.clone()).show_files_filter(filter);
-        dialog.open();
-        self.open_file_dialog = Some(dialog);
-        self.mode = Mode::SELECTION;
-    }
-
-    fn refresh_image(&mut self, ctx: &Context) {
-        if let Some(dialog) = &mut self.open_file_dialog {
-            if dialog.show(ctx).selected() {
-                if let Some(file) = dialog.path() {
-                    self.opened_file = Some(file.to_path_buf());
-                    self.image = Some(BlueKompassImage::new(file.to_path_buf()))
-                }
-            }
-        }
-    }
-
-    fn draw_image(&mut self, plot_ui: &mut PlotUi, image_id: TextureId, size: [usize; 2]) {
-        plot_ui.image(
-            PlotImage::new(
-                image_id,
-                PlotPoint::new(0.0, 0.0),
-                Vec2::new(size[0] as f32, size[1] as f32)
-            )
-        );
-    }
-
-    fn build(&mut self, plot_ui: &mut PlotUi, builder_mode: BuilderMode) {
-        self.unselect_shape();
-        self.builder.set_mode(builder_mode);
-        let response = plot_ui.response();
-        if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-            if response.contains_pointer() {
-                if let Some(pos) = plot_ui.pointer_coordinate() {
-                    self.builder.set_next_point(pos);
-                    if let Some(shape) = self.builder.build() {
-                        self.shapes.push(shape);
-                        self.builder.reset();
-                    } 
-                }
-            }
-        } else if let Some(pos) = plot_ui.pointer_coordinate() {
-            if response.contains_pointer() {
-                self.builder.draw(plot_ui, pos);
-            }
-        }
-    }
-
-    fn draw(&mut self, plot_ui: &mut PlotUi) {
-        for shape in &self.shapes {
-            shape.draw(plot_ui);
-        }
-    }
-
-    fn remove_shape(&mut self) {
-        if let Some(selection_index) = self.selected_shape_index {
-            self.selected_point_index = None;
-            self.shapes.remove(selection_index);
-            self.selected_shape_index = None;
-        }
-    }
-
-    fn remove_selected_shape(&mut self, plot_ui: &mut PlotUi) -> bool {
-        if plot_ui.ctx().input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::D)) {
-            self.remove_shape();
-            return true;
-        }
-        false
-    }
-
-    fn unselect_shape(&mut self) {
-        if let Some(selection_index) = self.selected_shape_index {
-            self.shapes[selection_index].unselect();
-            self.selected_shape_index = None;
-        }
-    }
-
-    fn select_shape(&mut self, selection_index: usize) {
-        self.shapes[selection_index].select();
-        self.selected_shape_index = Some(selection_index);
-    }
-
-    fn select_point_from_shape(&mut self, shape_index: usize, pos: PlotPoint){
-        if self.selected_point_index.is_none() {
-            let pos = pos.to_vec2();
-            let shape = &self.shapes[shape_index];
-            let result = shape.as_slice()
-                .iter()
-                .enumerate()
-                .map(|(i, point)| (i, (point.to_vec2() - pos).length()))
-                .min_by(
-                    |(_, r1), (_, r2)| {
-                        r1.partial_cmp(&r2)
-                            .unwrap_or(Ordering::Equal)
-                    }
-                );   
-            match result {
-                Some((point_index, radius)) if radius < 10. => {
-                    self.selected_point_index = Some(point_index);
-                }
-                _ => (),
-            }
-        }
-    }
-
-    fn update_shape(&mut self, shape_index: usize, pos: PlotPoint) {
-        self.select_point_from_shape(shape_index, pos);
-        if let Some(point_index) = self.selected_point_index {
-            let shape = &mut self.shapes[shape_index];
-            shape.replace(point_index, pos);
-        }
-    }
-
-    fn move_selected_point(&mut self, plot_ui: &mut PlotUi) -> bool {
-        if let Some(selected_index) = self.selected_shape_index {
-            let response = plot_ui.response();
-            if plot_ui.ctx().input(|i| i.pointer.primary_down()) {
-                match plot_ui.pointer_coordinate() {
-                    Some(pos) if response.contains_pointer() => {
-                        self.update_shape(selected_index, pos);
-                        return true;
-                    }
-                    _ => (),
-                }
-            } else {
-                self.selected_point_index = None;
-            }
-        }
-        false
-    }
-
-    fn select_next_shape(&mut self, pos: PlotPoint) {
-        let pos = pos.to_vec2();
-        let result = self.shapes.iter()
-            .enumerate()
-            .map(|(i, shape)| (i, shape.select_from_point(pos)))
-            .min_by(
-                |(_, score_a), (_, score_b)| {
-                    score_a.partial_cmp(&score_b)
-                        .unwrap_or(Ordering::Equal)
-                }
-            );
-        match result {
-            Some((selection_index, score)) if score < 10. => {
-                self.unselect_shape();
-                self.select_shape(selection_index);
-            }
-            Some(_) => self.unselect_shape(),
-            None => (),
-        }
-    }
-
-    fn select(&mut self, plot_ui: &mut PlotUi) {
-        if self.remove_selected_shape(plot_ui) {
-            return;
-        }
-        if self.move_selected_point(plot_ui) {
-            return;
-        }
-        let response = plot_ui.response();
-        if plot_ui.ctx().input(|i| i.pointer.primary_clicked()) {
-            match plot_ui.pointer_coordinate() {
-                Some(pos) if response.contains_pointer() => {
-                    self.select_next_shape(pos);
-                }
-                _ => (),
-            }
         }
     }
 }
