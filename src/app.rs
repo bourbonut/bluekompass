@@ -8,7 +8,7 @@ use egui_file::FileDialog;
 use std::path::PathBuf;
 
 use crate::shapes::Shape;
-use crate::builders::{Builder, BuilderMode};
+use crate::builders::{Builder, Line, Circle};
 
 mod selection;
 mod build;
@@ -76,6 +76,7 @@ impl eframe::App for BlueKompassApp {
                     // ui.add(Button::image(Image::new(include_image!("../assets/bluekompass.png"))));
                     if ui.button(button_text).clicked() {
                         self.mode = mode;
+                        self.builder.reset();
                     }
                 }
             });
@@ -99,8 +100,8 @@ impl eframe::App for BlueKompassApp {
                     match self.mode {
                         Mode::DRAG => self.unselect_shape(),
                         Mode::SELECTION => self.select(plot_ui),
-                        Mode::LINE => self.build(plot_ui, BuilderMode::Line),
-                        Mode::CIRCLE => self.build(plot_ui, BuilderMode::Circle),
+                        Mode::LINE => self.build(plot_ui, Line),
+                        Mode::CIRCLE => self.build(plot_ui, Circle),
                     }
 
                     self.draw(plot_ui);
