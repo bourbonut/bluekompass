@@ -9,7 +9,7 @@ impl BlueKompassApp {
         self.selected_shape_index = Some(selection_index);
     }
 
-    fn select_point_from_shape(&mut self, shape_index: usize, pos: PlotPoint){
+    pub fn select_point_from_shape(&mut self, shape_index: usize, pos: PlotPoint){
         if self.selected_point_index.is_none() {
             let pos = pos.to_vec2();
             let shape = &self.shapes[shape_index];
@@ -30,32 +30,6 @@ impl BlueKompassApp {
                 _ => (),
             }
         }
-    }
-
-    fn update_shape(&mut self, shape_index: usize, pos: PlotPoint) {
-        self.select_point_from_shape(shape_index, pos);
-        if let Some(point_index) = self.selected_point_index {
-            let shape = &mut self.shapes[shape_index];
-            shape.replace(point_index, pos);
-        }
-    }
-
-    fn move_selected_point(&mut self, plot_ui: &mut PlotUi) -> bool {
-        if let Some(selected_index) = self.selected_shape_index {
-            let response = plot_ui.response();
-            if plot_ui.ctx().input(|i| i.pointer.primary_down()) {
-                match plot_ui.pointer_coordinate() {
-                    Some(pos) if response.contains_pointer() => {
-                        self.update_shape(selected_index, pos);
-                        return true;
-                    }
-                    _ => (),
-                }
-            } else {
-                self.selected_point_index = None;
-            }
-        }
-        false
     }
 
     fn select_next_shape(&mut self, pos: PlotPoint) {

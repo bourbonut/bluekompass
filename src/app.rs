@@ -14,6 +14,7 @@ mod selection;
 mod build;
 mod image;
 mod draw;
+mod update;
 mod remove;
 
 #[derive(PartialEq)]
