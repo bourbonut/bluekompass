@@ -82,6 +82,7 @@ impl eframe::App for BlueKompassApp {
                 }
             });
 
+
             self.refresh_image(ctx);
 
             if let Some(image) = &mut self.image {
@@ -106,6 +107,10 @@ impl eframe::App for BlueKompassApp {
                     }
 
                     self.draw(plot_ui);
+                });
+            } else {
+                ui.with_layout(Layout::centered_and_justified(egui::Direction::TopDown), |ui| {
+                    ui.label("Welcome to BlueKompass v0.1.0 !\nStart by opening an image from the \"Open\" menu.");
                 });
             }
         });
