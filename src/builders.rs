@@ -86,11 +86,11 @@ impl Builder {
         }
     }
 
-    pub fn draw<T: ShapeBuilder>(&self, plot_ui: &mut PlotUi, current_point: PlotPoint, shape_to_draw: T) { 
-        shape_to_draw.draw(&self.points, plot_ui, current_point);
+    pub fn draw<T: ShapeBuilder>(&self, plot_ui: &mut PlotUi, current_point: PlotPoint, shape: T) { 
+        shape.draw(&self.points, plot_ui, current_point);
     }
 
-    pub fn build<T: ShapeBuilder>(&self, shape_to_build: T) -> Option<Box<dyn Shape>> {
-        shape_to_build.build(&self.points)
+    pub fn build<T: ShapeBuilder>(&self, shape: T) -> Option<Box<dyn Shape>> {
+        shape.build(&self.points)
     }
 }
