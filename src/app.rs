@@ -2,7 +2,7 @@ use super::image_loader::BlueKompassImage;
 use eframe::egui;
 use egui_plot::{Plot, PlotBounds};
 
-use egui::Layout;
+use egui::{Button, Image, ImageSource, Layout, include_image};
 
 use egui_file::FileDialog;
 use std::path::PathBuf;
@@ -26,11 +26,11 @@ enum Mode {
     //SPLINE,
 }
 
-const MODES: [(Mode, &str); 4] = [
-    (Mode::DRAG, "Drag"),
-    (Mode::SELECTION, "Selection"),
-    (Mode::LINE, "Line"),
-    (Mode::CIRCLE, "Circle"),
+const MODES: [(Mode, &str, ImageSource); 4] = [
+    (Mode::DRAG, "Drag", include_image!("../assets/hand.png")),
+    (Mode::SELECTION, "Selection", include_image!("../assets/cursor.png")),
+    (Mode::LINE, "Line", include_image!("../assets/line.png")),
+    (Mode::CIRCLE, "Circle", include_image!("../assets/circle.png")),
     //(Mode::SPLINE, "Spline"),
 ];
 
@@ -64,18 +64,26 @@ impl Default for BlueKompassApp {
 
 impl eframe::App for BlueKompassApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open").clicked() {
+                        self.open_image();
+                    }
+                    if ui.button("Quit").clicked() {
+                        std::process::exit(0);
+                    }
+                });
+            });
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             // Define layout
             ui.with_layout(Layout::left_to_right(Layout::default().horizontal_align()), |ui|{
-                // Add "Open" button to open images
-                if ui.button("Open").clicked() {
-                    self.open_image();
-                }
-
                 // Select mode with buttons
-                for (mode, button_text) in MODES {
+                for (mode, button_text, image_path) in MODES {
                     // ui.add(Button::image(Image::new(include_image!("../assets/bluekompass.png"))));
-                    if ui.button(button_text).clicked() {
+                    if ui.add(Button::image_and_text(Image::new(image_path), button_text)).clicked() {
                         self.mode = mode;
                         self.builder.reset();
                     }
