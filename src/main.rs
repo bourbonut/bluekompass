@@ -1,28 +1,62 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+use iced::{
+    advanced::mouse::ScrollDelta, event, mouse::Event as MouseEvent, widget::image::viewer,
+    Element, Event, Length::Fill, Point, Subscription,
+};
 
-mod app;
-mod image_loader;
-mod shapes;
-mod builders;
-mod maths;
-use self::app::BlueKompassApp;
-use eframe;
+struct App {
+    current_pos: Point<f32>,
+    k: f32,
+}
 
-fn main() -> Result<(), eframe::Error> {
-    // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    let icon = include_bytes!("../assets/bluekompass.png");
-    let options = eframe::NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default().with_icon(
-            eframe::icon_data::from_png_bytes(&icon[..]).unwrap()
-        ),
-        ..Default::default()
-    };
-    eframe::run_native(
-        "BlueKompass Application",
-        options,
-        Box::new(|cc| {
-            egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::<BlueKompassApp>::default()
-        }),
-    )
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            current_pos: Point::default(),
+            k: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    EventOccured(Event),
+}
+
+impl App {
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::EventOccured(event) => match event {
+                Event::Mouse(MouseEvent::WheelScrolled {
+                    delta: ScrollDelta::Lines { x: 0.0, y },
+                }) => {
+                    if y > 0.0 {
+                        self.k *= 2.0;
+                    } else {
+                        self.k *= 0.5;
+                    }
+                }
+                Event::Mouse(MouseEvent::CursorMoved { position }) => {
+                    self.current_pos = position;
+                }
+                _ => {}
+            },
+        }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        event::listen().map(Message::EventOccured)
+    }
+
+    fn view(&self) -> Element<'_, Message> {
+        viewer("./assets/front.png".into())
+            .width(Fill)
+            .height(Fill)
+            .into()
+    }
+}
+
+fn main() -> iced::Result {
+    iced::application("Viewer", App::update, App::view)
+        .subscription(App::subscription)
+        .run()
 }
