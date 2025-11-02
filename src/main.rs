@@ -1,7 +1,11 @@
 use iced::{
-    advanced::mouse::ScrollDelta, event, mouse::Event as MouseEvent, widget::image::viewer,
-    Element, Event, Length::Fill, Point, Subscription,
+    advanced::mouse::ScrollDelta, event, mouse::Event as MouseEvent, Element, Event, Length::Fill,
+    Point, Subscription,
 };
+
+mod viewer;
+
+use viewer::Viewer;
 
 struct App {
     current_pos: Point<f32>,
@@ -48,7 +52,7 @@ impl App {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        viewer("./assets/front.png".into())
+        Viewer::new("./assets/front.png")
             .width(Fill)
             .height(Fill)
             .into()
