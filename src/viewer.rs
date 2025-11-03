@@ -153,7 +153,7 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        renderer: &Renderer,
+        _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
         _shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
@@ -181,14 +181,6 @@ where
                             })
                             .clamp(self.min_scale, self.max_scale);
 
-                            let scaled_size = scaled_image_size(
-                                renderer,
-                                &self.handle,
-                                state,
-                                bounds.size(),
-                                self.content_fit,
-                            );
-
                             let factor = state.scale / previous_scale - 1.0;
 
                             let cursor_to_center = cursor_position - bounds.center();
@@ -197,16 +189,8 @@ where
                                 cursor_to_center * factor + state.current_offset * factor;
 
                             state.current_offset = Vector::new(
-                                if scaled_size.width > bounds.width {
-                                    state.current_offset.x + adjustment.x
-                                } else {
-                                    0.0
-                                },
-                                if scaled_size.height > bounds.height {
-                                    state.current_offset.y + adjustment.y
-                                } else {
-                                    0.0
-                                },
+                                state.current_offset.x + adjustment.x,
+                                state.current_offset.y + adjustment.y,
                             );
                         }
                     }
@@ -241,32 +225,12 @@ where
                 let state = tree.state.downcast_mut::<State>();
 
                 if let Some(origin) = state.cursor_grabbed_at {
-                    let scaled_size = scaled_image_size(
-                        renderer,
-                        &self.handle,
-                        state,
-                        bounds.size(),
-                        self.content_fit,
-                    );
-                    let hidden_width = (scaled_size.width - bounds.width / 2.0).max(0.0).round();
-
-                    let hidden_height = (scaled_size.height - bounds.height / 2.0).max(0.0).round();
-
                     let delta = position - origin;
 
-                    let x = if bounds.width < scaled_size.width {
-                        (state.starting_offset.x - delta.x).clamp(-hidden_width, hidden_width)
-                    } else {
-                        0.0
-                    };
-
-                    let y = if bounds.height < scaled_size.height {
-                        (state.starting_offset.y - delta.y).clamp(-hidden_height, hidden_height)
-                    } else {
-                        0.0
-                    };
-
-                    state.current_offset = Vector::new(x, y);
+                    state.current_offset = Vector::new(
+                        state.starting_offset.x - delta.x,
+                        state.starting_offset.y - delta.y,
+                    );
 
                     event::Status::Captured
                 } else {
@@ -328,7 +292,7 @@ where
                 _ => Vector::new(diff_w / 2.0, diff_h / 2.0),
             };
 
-            image_top_left - state.offset(bounds, final_size)
+            image_top_left - state.to_vector()
         };
 
         let drawing_bounds = Rectangle::new(bounds.position(), final_size);
@@ -380,15 +344,8 @@ impl State {
 
     /// Returns the current offset of the [`State`], given the bounds
     /// of the [`Viewer`] and its image.
-    fn offset(&self, bounds: Rectangle, image_size: Size) -> Vector {
-        let hidden_width = (image_size.width - bounds.width / 2.0).max(0.0).round();
-
-        let hidden_height = (image_size.height - bounds.height / 2.0).max(0.0).round();
-
-        Vector::new(
-            self.current_offset.x.clamp(-hidden_width, hidden_width),
-            self.current_offset.y.clamp(-hidden_height, hidden_height),
-        )
+    fn to_vector(&self) -> Vector {
+        Vector::new(self.current_offset.x, self.current_offset.y)
     }
 
     /// Returns if the cursor is currently grabbed by the [`Viewer`].
