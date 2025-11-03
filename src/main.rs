@@ -3,6 +3,7 @@ use iced::{
     widget::{button, container, row, svg, Button, Container, Stack},
     Background, Border, Element, Length, Shadow, Theme,
 };
+use rfd::FileDialog;
 
 mod viewer;
 use viewer::Viewer;
@@ -52,7 +53,12 @@ impl App {
     fn update(&mut self, message: Message) {
         match message {
             Message::Button => {
-                println!("Button pressed");
+                let files = FileDialog::new()
+                    .add_filter("text", &["txt", "rs"])
+                    .add_filter("rust", &["rs", "toml"])
+                    .set_directory("/")
+                    .pick_file();
+                println!("Button pressed: {:?}", files);
             }
         }
     }
