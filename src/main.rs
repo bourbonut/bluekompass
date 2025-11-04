@@ -1,17 +1,22 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
 use iced::advanced::svg::Handle;
+use iced::widget::{canvas, Column, Scrollable};
 use iced::window::icon::from_file;
 use iced::{
     theme::Palette,
-    widget::{button, container, svg::Svg, Button, Container, Row, Stack},
+    widget::{
+        button, container, pane_grid, svg::Svg, text, Button, Container, PaneGrid, Row, Stack,
+    },
     Background, Border, Element, Length, Shadow, Theme,
 };
 use rfd::FileDialog;
 
+mod circle;
 mod color;
 mod viewer;
 
+use circle::Circle;
 use color::Hex;
 use viewer::Viewer;
 
@@ -20,15 +25,29 @@ enum Message {
     // EventOccured(Event),
     Button,
     OpenFileDialog,
+    ChangeTheme,
+    SelectTheme(usize),
 }
 
 #[derive(Debug)]
+enum Status {
+    MainLayout,
+    ChangeThemeLayout,
+}
+
+enum Pane {
+    MainPane,
+    ThemePane,
+}
+
 struct Icon(String, Message);
 
-#[derive(Debug)]
 struct App {
     theme: Theme,
     icons: [Icon; 5],
+    status: Status,
+    panes: pane_grid::State<Pane>,
+    focus: Option<pane_grid::Pane>,
 }
 
 fn load_icon(file_path: &str) -> String {
@@ -53,6 +72,7 @@ fn styled(palette: Palette) -> button::Style {
 
 impl Default for App {
     fn default() -> Self {
+        let (panes, focus) = pane_grid::State::new(Pane::MainPane);
         Self {
             theme: Theme::default(),
             icons: [
@@ -63,8 +83,11 @@ impl Default for App {
                 Icon(load_icon("./assets/directional.svg"), Message::Button),
                 Icon(load_icon("./assets/circle.svg"), Message::Button),
                 Icon(load_icon("./assets/spline.svg"), Message::Button),
-                Icon(load_icon("./assets/palette.svg"), Message::Button),
+                Icon(load_icon("./assets/palette.svg"), Message::ChangeTheme),
             ],
+            status: Status::MainLayout,
+            panes: panes,
+            focus: Some(focus),
         }
     }
 }
@@ -72,9 +95,6 @@ impl Default for App {
 impl App {
     fn update(&mut self, message: Message) {
         match message {
-            Message::Button => {
-                println!("Button pressed");
-            }
             Message::OpenFileDialog => {
                 let file = FileDialog::new()
                     .add_filter("text", &["txt", "rs"])
@@ -82,6 +102,35 @@ impl App {
                     .set_directory("/")
                     .pick_file();
                 println!("Open File Dialog: {:?}", file);
+            }
+            Message::Button => {
+                println!("Button pressed");
+            }
+            Message::SelectTheme(idx) => {
+                self.theme = Theme::ALL.get(idx).unwrap().clone();
+                println!("Selected theme: {:?}", self.theme);
+            }
+            Message::ChangeTheme => {
+                match self.status {
+                    Status::ChangeThemeLayout => {
+                        self.status = Status::MainLayout;
+                        if let Some((_, siblings)) = self.panes.close(self.focus.unwrap()) {
+                            self.focus = Some(siblings);
+                        }
+                    }
+                    _ => {
+                        self.status = Status::ChangeThemeLayout;
+                        if let Some((siblings, split)) = self.panes.split(
+                            pane_grid::Axis::Vertical,
+                            self.focus.unwrap(),
+                            Pane::ThemePane,
+                        ) {
+                            self.panes.resize(split, 0.9);
+                            self.focus = Some(siblings);
+                        }
+                    }
+                };
+                println!("Current status: {:?}", self.status);
             }
         }
     }
@@ -91,6 +140,24 @@ impl App {
     // }
 
     fn view(&self) -> Element<'_, Message> {
+        match self.status {
+            Status::MainLayout => self.main_layout(),
+            Status::ChangeThemeLayout => {
+                PaneGrid::new(&self.panes, |_, state, _| {
+                    pane_grid::Content::new(match state {
+                        Pane::MainPane => self.main_layout(),
+                        Pane::ThemePane => self.available_theme(),
+                    })
+                })
+                .into()
+                // Row::from_vec(vec![self.main_layout(), self.available_theme()])
+                //     .width(Length::Shrink)
+                //     .into()
+            }
+        }
+    }
+
+    fn main_layout(&self) -> Element<'_, Message> {
         Stack::with_children([
             Viewer::new("./assets/front.png")
                 .width(Length::Fill)
@@ -104,14 +171,52 @@ impl App {
                 background: Some(Background::Color(iced::Color::TRANSPARENT)),
                 ..Default::default()
             })
-            .width(Length::Fill)
+            .width(Length::Shrink)
             .padding(10.)
             .center_x(Length::Fill)
             .into(),
         ])
+        .width(Length::Shrink)
         .into()
     }
 
+    fn available_theme(&self) -> Element<'_, Message> {
+        Column::from_vec(vec![
+            text("Available themes").size(14).into(),
+            Scrollable::new(
+                Column::from_vec(
+                    Theme::ALL
+                        .iter()
+                        .enumerate()
+                        .map(|(i, theme)| {
+                            Button::new(Row::from_vec(vec![
+                                canvas(Circle {
+                                    radius: 5.,
+                                    color: theme.palette().primary,
+                                })
+                                .width(20.)
+                                .height(20.)
+                                .into(),
+                                text(format!("{:?}", theme)).into(),
+                            ]))
+                            .width(200.)
+                            .on_press(Message::SelectTheme(i))
+                            .into()
+                        })
+                        .collect(),
+                )
+                .spacing(5.)
+                .width(Length::Shrink)
+                .height(Length::Shrink),
+            )
+            .width(Length::Shrink)
+            .into(),
+        ])
+        .width(Length::Shrink)
+        .into()
+    }
+
+    /// Creates a button containing an SVG icon, with the current theme applied to it.
     fn svg_button(&self, icon_idx: usize) -> Element<'_, Message> {
         let primary = self.theme.palette().primary.into_hex();
         let text = self.theme.palette().text.into_hex();
@@ -143,17 +248,15 @@ impl App {
 
 fn main() -> iced::Result {
     iced::application("Bluekompass", App::update, App::view)
-        .theme(|state| {
-            // Allow to change the theme
-            state.theme.clone()
-        })
+        .theme(|state| state.theme.clone()) // Allow to change the theme
         .window(iced::window::Settings {
+            // Add window icon
             icon: Some(
                 from_file("./assets/bluekompass.png")
                     .expect("Cannot find the icon in 'assets' folder"),
             ),
             ..Default::default()
         })
-        // .subscription(App::subscription) // For events
+        // .subscription(App::subscription) // For events (mouse, keyboard, ...)
         .run()
 }
