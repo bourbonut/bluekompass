@@ -9,7 +9,10 @@ use iced::{
 };
 use rfd::FileDialog;
 
+mod color;
 mod viewer;
+
+use color::Hex;
 use viewer::Viewer;
 
 #[derive(Debug, Clone)]
@@ -35,6 +38,19 @@ fn load_icon(file_path: &str) -> String {
         .expect(format!("It should have been able to read '{}'", file_path).as_str())
 }
 
+fn styled(palette: Palette) -> button::Style {
+    button::Style {
+        background: Some(Background::Color(palette.background)),
+        text_color: palette.text,
+        shadow: Shadow::default(),
+        border: Border {
+            color: palette.background,
+            width: 1.0,
+            radius: 10.0.into(),
+        },
+    }
+}
+
 impl Default for App {
     fn default() -> Self {
         Self {
@@ -50,19 +66,6 @@ impl Default for App {
                 Icon(load_icon("./assets/palette.svg"), Message::Button),
             ],
         }
-    }
-}
-
-fn styled(palette: Palette) -> button::Style {
-    button::Style {
-        background: Some(Background::Color(palette.background)),
-        text_color: palette.text,
-        shadow: Shadow::default(),
-        border: Border {
-            color: palette.background,
-            width: 1.0,
-            radius: 10.0.into(),
-        },
     }
 }
 
@@ -135,25 +138,6 @@ impl App {
             }
         })
         .into()
-    }
-}
-
-fn color_f32_to_u8(pigment: &f32) -> u8 {
-    (pigment * 255.) as u8
-}
-
-trait Hex {
-    fn into_hex(&self) -> String;
-}
-
-impl Hex for iced::Color {
-    fn into_hex(&self) -> String {
-        format!(
-            "#{:x}{:x}{:x}",
-            color_f32_to_u8(&self.r),
-            color_f32_to_u8(&self.g),
-            color_f32_to_u8(&self.b)
-        )
     }
 }
 
