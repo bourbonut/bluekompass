@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
 use iced::advanced::svg::Handle;
+use iced::window::icon::from_file;
 use iced::{
     theme::Palette,
     widget::{button, container, svg::Svg, Button, Container, Row, Stack},
@@ -11,10 +12,20 @@ use rfd::FileDialog;
 mod viewer;
 use viewer::Viewer;
 
+#[derive(Debug, Clone)]
+enum Message {
+    // EventOccured(Event),
+    Button,
+    OpenFileDialog,
+}
+
+#[derive(Debug)]
+struct Icon(String, Message);
+
 #[derive(Debug)]
 struct App {
     theme: Theme,
-    icons: [String; 3],
+    icons: [Icon; 5],
 }
 
 fn load_icon(file_path: &str) -> String {
@@ -29,18 +40,17 @@ impl Default for App {
         Self {
             theme: Theme::default(),
             icons: [
-                load_icon("./assets/folder-open.svg"),
-                load_icon("./assets/directional.svg"),
-                load_icon("./assets/circle.svg"),
+                Icon(
+                    load_icon("./assets/folder-open.svg"),
+                    Message::OpenFileDialog,
+                ),
+                Icon(load_icon("./assets/directional.svg"), Message::Button),
+                Icon(load_icon("./assets/circle.svg"), Message::Button),
+                Icon(load_icon("./assets/spline.svg"), Message::Button),
+                Icon(load_icon("./assets/palette.svg"), Message::Button),
             ],
         }
     }
-}
-
-#[derive(Debug, Clone)]
-enum Message {
-    // EventOccured(Event),
-    Button,
 }
 
 fn styled(palette: Palette) -> button::Style {
@@ -60,12 +70,15 @@ impl App {
     fn update(&mut self, message: Message) {
         match message {
             Message::Button => {
-                let files = FileDialog::new()
+                println!("Button pressed");
+            }
+            Message::OpenFileDialog => {
+                let file = FileDialog::new()
                     .add_filter("text", &["txt", "rs"])
                     .add_filter("rust", &["rs", "toml"])
                     .set_directory("/")
                     .pick_file();
-                println!("Button pressed: {:?}", files);
+                println!("Open File Dialog: {:?}", file);
             }
         }
     }
@@ -99,7 +112,8 @@ impl App {
     fn svg_button(&self, icon_idx: usize) -> Element<'_, Message> {
         let primary = self.theme.palette().primary.into_hex();
         let text = self.theme.palette().text.into_hex();
-        let modified_icon = self.icons[icon_idx]
+        let Icon(icon_string, icon_message) = &self.icons[icon_idx];
+        let modified_icon = icon_string
             .replace("currentColor", &primary)
             .replace("white", &text)
             .into_bytes();
@@ -109,7 +123,7 @@ impl App {
                 .height(Length::Shrink),
         )
         .padding(2.)
-        .on_press(Message::Button)
+        .on_press(icon_message.clone())
         .style(|theme: &Theme, status: button::Status| {
             let base = styled(theme.palette());
             match status {
@@ -144,17 +158,17 @@ impl Hex for iced::Color {
 }
 
 fn main() -> iced::Result {
-    let path = PathBuf::from_str("./assets/folder-open.svg")
-        .expect("'assets/folder-open.svg' should exists.");
-    let color = Theme::Dracula.palette().text;
-    let content = fs::read_to_string(path)
-        .expect("It should have been able to read 'assets/folder-open.svg'")
-        .replace("currentColor", color.into_hex().as_str());
-    println!("{content:?}");
     iced::application("Bluekompass", App::update, App::view)
         .theme(|state| {
             // Allow to change the theme
             state.theme.clone()
+        })
+        .window(iced::window::Settings {
+            icon: Some(
+                from_file("./assets/bluekompass.png")
+                    .expect("Cannot find the icon in 'assets' folder"),
+            ),
+            ..Default::default()
         })
         // .subscription(App::subscription) // For events
         .run()
