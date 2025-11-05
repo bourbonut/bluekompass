@@ -143,16 +143,17 @@ impl App {
         match self.status {
             Status::MainLayout => self.main_layout(),
             Status::ChangeThemeLayout => {
-                PaneGrid::new(&self.panes, |_, state, _| {
-                    pane_grid::Content::new(match state {
-                        Pane::MainPane => self.main_layout(),
-                        Pane::ThemePane => self.available_theme(),
-                    })
-                })
-                .into()
-                // Row::from_vec(vec![self.main_layout(), self.available_theme()])
-                //     .width(Length::Shrink)
-                //     .into()
+                self.available_theme()
+                // PaneGrid::new(&self.panes, |_, state, _| {
+                //     pane_grid::Content::new(match state {
+                //         Pane::MainPane => self.main_layout(),
+                //         Pane::ThemePane => self.available_theme(),
+                //     })
+                // })
+                // .into()
+                // // Row::from_vec(vec![self.main_layout(), self.available_theme()])
+                // //     .width(Length::Shrink)
+                // //     .into()
             }
         }
     }
@@ -181,39 +182,102 @@ impl App {
     }
 
     fn available_theme(&self) -> Element<'_, Message> {
-        Column::from_vec(vec![
-            text("Available themes").size(14).into(),
-            Scrollable::new(
-                Column::from_vec(
-                    Theme::ALL
-                        .iter()
-                        .enumerate()
-                        .map(|(i, theme)| {
-                            Button::new(Row::from_vec(vec![
-                                canvas(Circle {
-                                    radius: 5.,
-                                    color: theme.palette().primary,
-                                })
-                                .width(20.)
-                                .height(20.)
-                                .into(),
-                                text(format!("{:?}", theme)).into(),
-                            ]))
-                            .width(200.)
-                            .on_press(Message::SelectTheme(i))
-                            .into()
-                        })
-                        .collect(),
-                )
-                .spacing(5.)
-                .width(Length::Shrink)
-                .height(Length::Shrink),
+        Stack::with_children([
+            Viewer::new("./assets/front.png")
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into(),
+            Container::new(
+                Row::from_vec((0..self.icons.len()).map(|i| self.svg_button(i)).collect())
+                    .spacing(2.5),
             )
+            .style(|_: &Theme| container::Style {
+                background: Some(Background::Color(iced::Color::TRANSPARENT)),
+                ..Default::default()
+            })
             .width(Length::Shrink)
+            .padding(10.)
+            .center_x(Length::Fill)
+            .into(),
+            Container::new(
+                Container::new(Column::from_vec(vec![
+                    text("Available themes").size(14).into(),
+                    Scrollable::new(
+                        Column::from_vec(
+                            Theme::ALL
+                                .iter()
+                                .enumerate()
+                                .map(|(i, theme)| {
+                                    Button::new(Row::from_vec(vec![
+                                        canvas(Circle {
+                                            radius: 5.,
+                                            color: theme.palette().primary,
+                                        })
+                                        .width(20.)
+                                        .height(20.)
+                                        .into(),
+                                        text(format!("{:?}", theme)).into(),
+                                    ]))
+                                    .style(|theme, _| button::Style {
+                                        border: Border::default().rounded(10.),
+                                        text_color: theme.palette().text,
+                                        ..Default::default()
+                                    })
+                                    .width(200.)
+                                    .on_press(Message::SelectTheme(i))
+                                    .into()
+                                })
+                                .collect(),
+                        )
+                        .spacing(5.),
+                    )
+                    .into(),
+                ]))
+                .height(Length::Fill)
+                .style(|theme| container::Style {
+                    background: Some(Background::Color(theme.palette().background)),
+                    ..Default::default()
+                }),
+            )
+            .align_right(Length::Fill)
             .into(),
         ])
         .width(Length::Shrink)
         .into()
+
+        // Column::from_vec(vec![
+        //     text("Available themes").size(14).into(),
+        //     Scrollable::new(
+        //         Column::from_vec(
+        //             Theme::ALL
+        //                 .iter()
+        //                 .enumerate()
+        //                 .map(|(i, theme)| {
+        //                     Button::new(Row::from_vec(vec![
+        //                         canvas(Circle {
+        //                             radius: 5.,
+        //                             color: theme.palette().primary,
+        //                         })
+        //                         .width(20.)
+        //                         .height(20.)
+        //                         .into(),
+        //                         text(format!("{:?}", theme)).into(),
+        //                     ]))
+        //                     .width(200.)
+        //                     .on_press(Message::SelectTheme(i))
+        //                     .into()
+        //                 })
+        //                 .collect(),
+        //         )
+        //         .spacing(5.)
+        //         .width(Length::Shrink)
+        //         .height(Length::Shrink),
+        //     )
+        //     .width(Length::Shrink)
+        //     .into(),
+        // ])
+        // .width(Length::Shrink)
+        // .into()
     }
 
     /// Creates a button containing an SVG icon, with the current theme applied to it.
