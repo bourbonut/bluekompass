@@ -158,7 +158,9 @@ impl App {
                 Button::new(Row::from_vec(vec![
                     canvas(Circle {
                         radius: 5.,
-                        color: theme.palette().primary,
+                        border_radius: 2.,
+                        fill_color: theme.palette().primary,
+                        border_color: theme.palette().text,
                     })
                     .width(20.)
                     .height(20.)

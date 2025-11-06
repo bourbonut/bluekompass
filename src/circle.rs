@@ -8,7 +8,9 @@ use iced::Theme;
 #[derive(Debug)]
 pub struct Circle {
     pub radius: f32,
-    pub color: Color,
+    pub border_radius: f32,
+    pub fill_color: Color,
+    pub border_color: Color,
 }
 
 // Then, we implement the `Program` trait
@@ -28,10 +30,12 @@ impl<Message> canvas::Program<Message> for Circle {
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
         // We create a `Path` representing a simple circle
-        let circle = canvas::Path::circle(frame.center(), self.radius);
+        let filled_circle = canvas::Path::circle(frame.center(), self.radius);
+        let border_circle = canvas::Path::circle(frame.center(), self.radius + self.border_radius);
 
         // And fill it with some color
-        frame.fill(&circle, self.color);
+        frame.fill(&border_circle, self.border_color);
+        frame.fill(&filled_circle, self.fill_color);
 
         // Then, we produce the geometry
         vec![frame.into_geometry()]
