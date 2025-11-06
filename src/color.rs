@@ -1,5 +1,5 @@
-fn color_f32_to_u8(pigment: &f32) -> u8 {
-    (pigment * 255.) as u8
+fn color_f32_to_u8(pigment: &f32) -> u32 {
+    (pigment * 255.) as u32
 }
 
 pub trait Hex {
@@ -9,10 +9,10 @@ pub trait Hex {
 impl Hex for iced::Color {
     fn into_hex(&self) -> String {
         format!(
-            "#{:x}{:x}{:x}",
-            color_f32_to_u8(&self.r),
-            color_f32_to_u8(&self.g),
-            color_f32_to_u8(&self.b)
+            "#{:06x}",
+            color_f32_to_u8(&self.r) << 16
+                | color_f32_to_u8(&self.g) << 8
+                | color_f32_to_u8(&self.b)
         )
     }
 }
