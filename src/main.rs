@@ -5,9 +5,7 @@ use iced::widget::{canvas, Column, Scrollable};
 use iced::window::icon::from_file;
 use iced::{
     theme::Palette,
-    widget::{
-        button, container, pane_grid, svg::Svg, text, Button, Container, PaneGrid, Row, Stack,
-    },
+    widget::{button, container, svg::Svg, text, Button, Container, Row, Stack},
     Background, Border, Element, Length, Shadow, Theme,
 };
 use rfd::FileDialog;
@@ -35,19 +33,12 @@ enum Status {
     ChangeThemeLayout,
 }
 
-enum Pane {
-    MainPane,
-    ThemePane,
-}
-
 struct Icon(String, Message);
 
 struct App {
     theme: Theme,
     icons: [Icon; 5],
     status: Status,
-    panes: pane_grid::State<Pane>,
-    focus: Option<pane_grid::Pane>,
 }
 
 fn load_icon(file_path: &str) -> String {
@@ -72,7 +63,6 @@ fn styled(palette: Palette) -> button::Style {
 
 impl Default for App {
     fn default() -> Self {
-        let (panes, focus) = pane_grid::State::new(Pane::MainPane);
         Self {
             theme: Theme::default(),
             icons: [
@@ -86,8 +76,6 @@ impl Default for App {
                 Icon(load_icon("./assets/palette.svg"), Message::ChangeTheme),
             ],
             status: Status::MainLayout,
-            panes: panes,
-            focus: Some(focus),
         }
     }
 }
@@ -114,20 +102,9 @@ impl App {
                 match self.status {
                     Status::ChangeThemeLayout => {
                         self.status = Status::MainLayout;
-                        if let Some((_, siblings)) = self.panes.close(self.focus.unwrap()) {
-                            self.focus = Some(siblings);
-                        }
                     }
                     _ => {
                         self.status = Status::ChangeThemeLayout;
-                        if let Some((siblings, split)) = self.panes.split(
-                            pane_grid::Axis::Vertical,
-                            self.focus.unwrap(),
-                            Pane::ThemePane,
-                        ) {
-                            self.panes.resize(split, 0.9);
-                            self.focus = Some(siblings);
-                        }
                     }
                 };
                 println!("Current status: {:?}", self.status);
@@ -140,144 +117,77 @@ impl App {
     // }
 
     fn view(&self) -> Element<'_, Message> {
-        match self.status {
-            Status::MainLayout => self.main_layout(),
-            Status::ChangeThemeLayout => {
-                self.available_theme()
-                // PaneGrid::new(&self.panes, |_, state, _| {
-                //     pane_grid::Content::new(match state {
-                //         Pane::MainPane => self.main_layout(),
-                //         Pane::ThemePane => self.available_theme(),
-                //     })
-                // })
-                // .into()
-                // // Row::from_vec(vec![self.main_layout(), self.available_theme()])
-                // //     .width(Length::Shrink)
-                // //     .into()
-            }
-        }
-    }
-
-    fn main_layout(&self) -> Element<'_, Message> {
-        Stack::with_children([
-            Viewer::new("./assets/front.png")
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into(),
-            Container::new(
-                Row::from_vec((0..self.icons.len()).map(|i| self.svg_button(i)).collect())
-                    .spacing(2.5),
-            )
-            .style(|_: &Theme| container::Style {
-                background: Some(Background::Color(iced::Color::TRANSPARENT)),
-                ..Default::default()
-            })
-            .width(Length::Shrink)
-            .padding(10.)
-            .center_x(Length::Fill)
-            .into(),
-        ])
+        Stack::with_children(match self.status {
+            Status::MainLayout => vec![self.viewer(), self.tools()],
+            Status::ChangeThemeLayout => vec![self.viewer(), self.tools(), self.available_theme()],
+        })
         .width(Length::Shrink)
         .into()
     }
 
+    /// Creates a viewer where the image is drawn
+    fn viewer(&self) -> Element<'_, Message> {
+        Viewer::new("./assets/front.png")
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    /// Creates a `Container` with all tool buttons distributed into one row
+    fn tools(&self) -> Element<'_, Message> {
+        Container::new(
+            Row::from_vec((0..self.icons.len()).map(|i| self.svg_button(i)).collect()).spacing(2.5),
+        )
+        .style(|_: &Theme| container::Style {
+            background: Some(Background::Color(iced::Color::TRANSPARENT)),
+            ..Default::default()
+        })
+        .width(Length::Shrink)
+        .padding(10.)
+        .center_x(Length::Fill)
+        .into()
+    }
+
+    /// Creates a `Container` with all available themes distributed into one column and into a
+    /// `Scrollable` widget
     fn available_theme(&self) -> Element<'_, Message> {
-        Stack::with_children([
-            Viewer::new("./assets/front.png")
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into(),
-            Container::new(
-                Row::from_vec((0..self.icons.len()).map(|i| self.svg_button(i)).collect())
-                    .spacing(2.5),
-            )
-            .style(|_: &Theme| container::Style {
-                background: Some(Background::Color(iced::Color::TRANSPARENT)),
-                ..Default::default()
-            })
-            .width(Length::Shrink)
-            .padding(10.)
-            .center_x(Length::Fill)
-            .into(),
-            Container::new(
-                Container::new(Column::from_vec(vec![
-                    text("Available themes").size(14).into(),
-                    Scrollable::new(
-                        Column::from_vec(
-                            Theme::ALL
-                                .iter()
-                                .enumerate()
-                                .map(|(i, theme)| {
-                                    Button::new(Row::from_vec(vec![
-                                        canvas(Circle {
-                                            radius: 5.,
-                                            color: theme.palette().primary,
-                                        })
-                                        .width(20.)
-                                        .height(20.)
-                                        .into(),
-                                        text(format!("{:?}", theme)).into(),
-                                    ]))
-                                    .style(|theme, _| button::Style {
-                                        border: Border::default().rounded(10.),
-                                        text_color: theme.palette().text,
-                                        ..Default::default()
-                                    })
-                                    .width(200.)
-                                    .on_press(Message::SelectTheme(i))
-                                    .into()
-                                })
-                                .collect(),
-                        )
-                        .spacing(5.),
-                    )
+        let themes = Theme::ALL
+            .iter()
+            .enumerate()
+            .map(|(i, theme)| {
+                Button::new(Row::from_vec(vec![
+                    canvas(Circle {
+                        radius: 5.,
+                        color: theme.palette().primary,
+                    })
+                    .width(20.)
+                    .height(20.)
                     .into(),
+                    text(format!("{:?}", theme)).into(),
                 ]))
-                .height(Length::Fill)
-                .style(|theme| container::Style {
-                    background: Some(Background::Color(theme.palette().background)),
+                .style(|theme, _| button::Style {
+                    border: Border::default().rounded(10.),
+                    text_color: theme.palette().text,
                     ..Default::default()
-                }),
-            )
-            .align_right(Length::Fill)
-            .into(),
-        ])
-        .width(Length::Shrink)
+                })
+                .width(200.)
+                .on_press(Message::SelectTheme(i))
+                .into()
+            })
+            .collect();
+        Container::new(
+            Container::new(Column::from_vec(vec![
+                text("Available themes").size(14).into(),
+                Scrollable::new(Column::from_vec(themes).spacing(5.)).into(),
+            ]))
+            .height(Length::Fill)
+            .style(|theme| container::Style {
+                background: Some(Background::Color(theme.palette().background)),
+                ..Default::default()
+            }),
+        )
+        .align_right(Length::Fill)
         .into()
-
-        // Column::from_vec(vec![
-        //     text("Available themes").size(14).into(),
-        //     Scrollable::new(
-        //         Column::from_vec(
-        //             Theme::ALL
-        //                 .iter()
-        //                 .enumerate()
-        //                 .map(|(i, theme)| {
-        //                     Button::new(Row::from_vec(vec![
-        //                         canvas(Circle {
-        //                             radius: 5.,
-        //                             color: theme.palette().primary,
-        //                         })
-        //                         .width(20.)
-        //                         .height(20.)
-        //                         .into(),
-        //                         text(format!("{:?}", theme)).into(),
-        //                     ]))
-        //                     .width(200.)
-        //                     .on_press(Message::SelectTheme(i))
-        //                     .into()
-        //                 })
-        //                 .collect(),
-        //         )
-        //         .spacing(5.)
-        //         .width(Length::Shrink)
-        //         .height(Length::Shrink),
-        //     )
-        //     .width(Length::Shrink)
-        //     .into(),
-        // ])
-        // .width(Length::Shrink)
-        // .into()
     }
 
     /// Creates a button containing an SVG icon, with the current theme applied to it.
@@ -291,8 +201,8 @@ impl App {
             .into_bytes();
         Button::new(
             Svg::new(Handle::from_memory(modified_icon))
-                .width(Length::Shrink)
-                .height(Length::Shrink),
+                .width(26.)
+                .height(26.),
         )
         .padding(2.)
         .on_press(icon_message.clone())
