@@ -4,18 +4,19 @@ use iced::advanced::svg::Handle;
 use iced::widget::{canvas, Column, Scrollable};
 use iced::window::icon::from_file;
 use iced::{
-    theme::Palette,
-    widget::{button, container, svg::Svg, text, Button, Container, Row, Stack},
-    Background, Border, Element, Length, Shadow, Theme,
+    widget::{svg::Svg, text, Button, Container, Row, Stack},
+    Element, Length, Theme,
 };
 use rfd::FileDialog;
 
 mod circle;
 mod color;
+mod style;
 mod viewer;
 
 use circle::Circle;
 use color::Hex;
+use style::{container_theme_filled, container_transparent, svg_tool_style, theme_style};
 use viewer::Viewer;
 
 #[derive(Debug, Clone)]
@@ -46,19 +47,6 @@ fn load_icon(file_path: &str) -> String {
         PathBuf::from_str(file_path).expect(format!("'{}' should exists.", file_path).as_str());
     fs::read_to_string(path)
         .expect(format!("It should have been able to read '{}'", file_path).as_str())
-}
-
-fn styled(palette: Palette) -> button::Style {
-    button::Style {
-        background: Some(Background::Color(palette.background)),
-        text_color: palette.text,
-        shadow: Shadow::default(),
-        border: Border {
-            color: palette.background,
-            width: 1.0,
-            radius: 10.0.into(),
-        },
-    }
 }
 
 impl Default for App {
@@ -138,10 +126,7 @@ impl App {
         Container::new(
             Row::from_vec((0..self.icons.len()).map(|i| self.svg_button(i)).collect()).spacing(2.5),
         )
-        .style(|_: &Theme| container::Style {
-            background: Some(Background::Color(iced::Color::TRANSPARENT)),
-            ..Default::default()
-        })
+        .style(container_transparent)
         .width(Length::Shrink)
         .padding(10.)
         .center_x(Length::Fill)
@@ -167,11 +152,7 @@ impl App {
                     .into(),
                     text(format!("{:?}", theme)).into(),
                 ]))
-                .style(|theme, _| button::Style {
-                    border: Border::default().rounded(10.),
-                    text_color: theme.palette().text,
-                    ..Default::default()
-                })
+                .style(theme_style)
                 .width(200.)
                 .on_press(Message::SelectTheme(i))
                 .into()
@@ -183,10 +164,7 @@ impl App {
                 Scrollable::new(Column::from_vec(themes).spacing(5.)).into(),
             ]))
             .height(Length::Fill)
-            .style(|theme| container::Style {
-                background: Some(Background::Color(theme.palette().background)),
-                ..Default::default()
-            }),
+            .style(container_theme_filled),
         )
         .align_right(Length::Fill)
         .into()
@@ -208,16 +186,7 @@ impl App {
         )
         .padding(2.)
         .on_press(icon_message.clone())
-        .style(|theme: &Theme, status: button::Status| {
-            let base = styled(theme.palette());
-            match status {
-                button::Status::Hovered => button::Style {
-                    background: Some(Background::Color(theme.palette().primary.scale_alpha(0.5))),
-                    ..base
-                },
-                _ => base,
-            }
-        })
+        .style(svg_tool_style)
         .into()
     }
 }
