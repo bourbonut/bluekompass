@@ -1,3 +1,10 @@
+# Bluekompass
+
+Bluekompass is a small project to allow extracting shapes from images.
+
+> [!WARNING]
+> This project is under development
+
 ## GTK Backend
 
 | Distribution	    | Installation Command          |
