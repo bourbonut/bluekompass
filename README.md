@@ -7,3 +7,6 @@
 | Debian & Ubuntu   | `apt install libgtk-3-dev`    |
 
 [Source](https://docs.rs/rfd/0.15.4/rfd/#gtk-backend)
+
+> [!NOTE]
+> `shapes` is a [worktree](https://git-scm.com/docs/git-worktree).
