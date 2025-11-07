@@ -12,12 +12,15 @@ use iced::widget::Canvas;
 use iced::widget::Container;
 use iced::widget::canvas;
 
+mod linear_scaler;
+use linear_scaler::LinearScaler;
+
 trait IntoVec2 {
-    fn into(self) -> Vec2;
+    fn into_vec2(self) -> Vec2;
 }
 
 impl IntoVec2 for Point {
-    fn into(self) -> Vec2 {
+    fn into_vec2(self) -> Vec2 {
         Vec2::new(self.x, self.y)
     }
 }
@@ -39,7 +42,11 @@ pub struct Circle {
 
 fn is_inside_circle(cursor: impl IntoVec2, center: impl IntoVec2, radius: f32) -> bool {
     let radius2 = radius * radius;
-    ((cursor.into() - center.into()).length_squared().abs() - radius2) <= 0.
+    ((cursor.into_vec2() - center.into_vec2())
+        .length_squared()
+        .abs()
+        - radius2)
+        <= 0.
 }
 
 impl Circle {
@@ -48,10 +55,26 @@ impl Circle {
     }
 }
 
+struct State {
+    fill_color: Option<Color>,
+    current_position: Point<f32>,
+    scale: f32,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            current_position: Point::new(0.5, 0.5),
+            fill_color: None,
+            scale: 1.0,
+        }
+    }
+}
+
 // Then, we implement the `Program` trait
 impl canvas::Program<Message> for Circle {
     // No internal state
-    type State = Option<Color>;
+    type State = State;
 
     fn draw(
         &self,
@@ -62,17 +85,25 @@ impl canvas::Program<Message> for Circle {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // We prepare a new `Frame`
+        let x_scaler = LinearScaler::new(&[0., 1.], &[0., bounds.width]);
+        let y_scaler = LinearScaler::new(&[0., 1.], &[0., bounds.height]);
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
+        let center_pos = Point::new(
+            x_scaler.apply(state.current_position.x),
+            y_scaler.apply(state.current_position.y),
+        );
+        println!("Center position: {:?}", center_pos);
         // We create a `Path` representing a simple circle
-        let filled_circle = canvas::Path::circle(frame.center(), self.radius);
-        let border_circle = canvas::Path::circle(frame.center(), self.radius + self.border_radius);
+        let filled_circle = canvas::Path::circle(center_pos, self.radius * state.scale);
+        let border_circle =
+            canvas::Path::circle(center_pos, self.radius * state.scale + self.border_radius);
 
         // And fill it with some color
         frame.fill(&border_circle, self.border_color);
         frame.fill(
             &filled_circle,
-            match *state {
+            match state.fill_color {
                 Some(color) => color,
                 None => self.fill_color,
             },
@@ -85,25 +116,38 @@ impl canvas::Program<Message> for Circle {
     fn update(
         &self,
         state: &mut Self::State,
-        _event: canvas::Event,
+        event: canvas::Event,
         bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
+        match event {
+            canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) => match delta {
+                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                    state.scale = if y > 0.0 {
+                        state.scale * (1.0 + 0.2)
+                    } else {
+                        state.scale / (1.0 + 0.2)
+                    };
+                }
+            },
+            _ => (),
+        }
         match cursor.position() {
             Some(position) => {
                 if is_inside_circle(position, bounds.center(), self.total_radius()) {
-                    *state = Some(self.fill_color.scale_alpha(0.5));
+                    state.fill_color = Some(self.fill_color.scale_alpha(0.5));
+                    println!("position: {:?}", position);
                     (
                         canvas::event::Status::Captured,
                         Some(Message::CursorMoved(position)),
                     )
                 } else {
-                    *state = Some(self.fill_color);
+                    state.fill_color = Some(self.fill_color);
                     (canvas::event::Status::Ignored, None)
                 }
             }
             None => {
-                *state = Some(self.fill_color);
+                state.fill_color = Some(self.fill_color);
                 (canvas::event::Status::Ignored, None)
             }
         }
@@ -118,8 +162,8 @@ struct App {}
 impl App {
     fn update(&mut self, message: Message) {
         match message {
-            Message::CursorMoved(point) => {
-                println!("{:?}", point);
+            Message::CursorMoved(_point) => {
+                // println!("{:?}", point);
             }
         }
     }
@@ -129,16 +173,21 @@ impl App {
             radius: 30.,
             border_radius: 3.,
             fill_color: Theme::Dark.palette().primary,
-            border_color: Theme::Dark.palette().text,
+            border_color: Color {
+                r: 1.,
+                g: 0.,
+                b: 0.,
+                a: 1.,
+            },
         };
-        let r = circle.total_radius() * 2.;
+        let _r = circle.total_radius() * 2.;
         Container::new(
-            Container::new(Canvas::new(circle).width(r).height(r)).style(|_| {
-                iced::widget::container::Style {
+            Container::new(Canvas::new(circle).width(Length::Fill).height(Length::Fill)).style(
+                |_| iced::widget::container::Style {
                     background: Some(Background::Color(Color::WHITE)),
                     ..Default::default()
-                }
-            }),
+                },
+            ),
         )
         .center(Length::Fill)
         .into()
