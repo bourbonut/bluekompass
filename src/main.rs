@@ -34,6 +34,7 @@ enum Message {
 
 #[derive(Debug)]
 pub struct Circle {
+    pub position: Point<f32>,
     pub radius: f32,
     pub border_radius: f32,
     pub fill_color: Color,
@@ -50,21 +51,21 @@ fn is_inside_circle(cursor: impl IntoVec2, center: impl IntoVec2, radius: f32) -
 }
 
 impl Circle {
-    pub fn total_radius(&self) -> f32 {
-        return self.border_radius + self.radius;
+    pub fn total_radius(&self, scale: &f32) -> f32 {
+        return self.border_radius + self.radius * scale;
     }
 }
 
 struct State {
     fill_color: Option<Color>,
-    current_position: Point<f32>,
+    current_offset: Point<f32>,
     scale: f32,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
-            current_position: Point::new(0.5, 0.5),
+            current_offset: Point::new(0., 0.),
             fill_color: None,
             scale: 1.0,
         }
@@ -85,19 +86,20 @@ impl canvas::Program<Message> for Circle {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // We prepare a new `Frame`
-        let x_scaler = LinearScaler::new(&[0., 1.], &[0., bounds.width]);
-        let y_scaler = LinearScaler::new(&[0., 1.], &[0., bounds.height]);
+        let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
+        let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
-        let center_pos = Point::new(
-            x_scaler.apply(state.current_position.x),
-            y_scaler.apply(state.current_position.y),
-        );
-        println!("Center position: {:?}", center_pos);
         // We create a `Path` representing a simple circle
-        let filled_circle = canvas::Path::circle(center_pos, self.radius * state.scale);
-        let border_circle =
-            canvas::Path::circle(center_pos, self.radius * state.scale + self.border_radius);
+        let circle_position = Point::new(
+            x_scaler.apply(self.position.x + state.current_offset.x),
+            y_scaler.apply(self.position.y + state.current_offset.y),
+        );
+        let filled_circle = canvas::Path::circle(circle_position, self.radius * state.scale);
+        let border_circle = canvas::Path::circle(
+            circle_position,
+            self.radius * state.scale + self.border_radius,
+        );
 
         // And fill it with some color
         frame.fill(&border_circle, self.border_color);
@@ -120,23 +122,37 @@ impl canvas::Program<Message> for Circle {
         bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
-        match event {
-            canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) => match delta {
-                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
-                    state.scale = if y > 0.0 {
-                        state.scale * (1.0 + 0.2)
-                    } else {
-                        state.scale / (1.0 + 0.2)
-                    };
-                }
-            },
-            _ => (),
-        }
         match cursor.position() {
             Some(position) => {
-                if is_inside_circle(position, bounds.center(), self.total_radius()) {
+                if let canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
+                    let (mouse::ScrollDelta::Lines { y, .. }
+                    | mouse::ScrollDelta::Pixels { y, .. }) = delta;
+                    let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
+                    let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
+                    let cursor_position =
+                        Point::new(x_scaler.invert(position.x), y_scaler.invert(position.y));
+                    let circle_position = Point::new(
+                        self.position.x + state.current_offset.x,
+                        self.position.y + state.current_offset.y,
+                    );
+                    let cursor_to_circle = cursor_position - circle_position;
+                    if y > 0.0 {
+                        state.scale = state.scale * (1.0 + 0.1);
+                        state.current_offset = Point::new(
+                            state.current_offset.x + cursor_to_circle.x * (1.0 + 0.1),
+                            state.current_offset.y + cursor_to_circle.y * (1.0 + 0.1),
+                        );
+                    } else {
+                        state.scale = state.scale / (1.0 + 0.1);
+                        state.current_offset = Point::new(
+                            state.current_offset.x + cursor_to_circle.x / (1.0 + 0.1),
+                            state.current_offset.y + cursor_to_circle.y / (1.0 + 0.1),
+                        );
+                    };
+                }
+                if is_inside_circle(position, bounds.center(), self.total_radius(&state.scale)) {
                     state.fill_color = Some(self.fill_color.scale_alpha(0.5));
-                    println!("position: {:?}", position);
+                    println!("current position: {:?}", position);
                     (
                         canvas::event::Status::Captured,
                         Some(Message::CursorMoved(position)),
@@ -170,6 +186,7 @@ impl App {
 
     fn view(&self) -> Element<'_, Message> {
         let circle = Circle {
+            position: Point::new(0.5, 0.5),
             radius: 30.,
             border_radius: 3.,
             fill_color: Theme::Dark.palette().primary,
@@ -180,7 +197,6 @@ impl App {
                 a: 1.,
             },
         };
-        let _r = circle.total_radius() * 2.;
         Container::new(
             Container::new(Canvas::new(circle).width(Length::Fill).height(Length::Fill)).style(
                 |_| iced::widget::container::Style {
