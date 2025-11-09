@@ -188,10 +188,7 @@ where
                             let adjustment =
                                 cursor_to_center * factor + state.current_offset * factor;
 
-                            state.current_offset = Vector::new(
-                                state.current_offset.x + adjustment.x,
-                                state.current_offset.y + adjustment.y,
-                            );
+                            state.current_offset = state.current_offset + adjustment;
                         }
                     }
                 }
