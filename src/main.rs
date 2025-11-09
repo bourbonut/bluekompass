@@ -7,6 +7,7 @@ use iced::Point;
 use iced::Rectangle;
 use iced::Renderer;
 use iced::Theme;
+use iced::Vector;
 use iced::advanced::mouse;
 use iced::widget::Canvas;
 use iced::widget::Container;
@@ -34,7 +35,7 @@ enum Message {
 
 #[derive(Debug)]
 pub struct Circle {
-    pub position: Point<f32>,
+    pub position: Vector<f32>,
     pub radius: f32,
     pub border_radius: f32,
     pub fill_color: Color,
@@ -58,14 +59,14 @@ impl Circle {
 
 struct State {
     fill_color: Option<Color>,
-    current_offset: Point<f32>,
+    current_offset: Vector<f32>,
     scale: f32,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
-            current_offset: Point::new(0., 0.),
+            current_offset: Vector::new(0., 0.),
             fill_color: None,
             scale: 1.0,
         }
@@ -124,35 +125,38 @@ impl canvas::Program<Message> for Circle {
     ) -> (canvas::event::Status, Option<Message>) {
         match cursor.position() {
             Some(position) => {
+                let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
+                let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
                 if let canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
                     let (mouse::ScrollDelta::Lines { y, .. }
                     | mouse::ScrollDelta::Pixels { y, .. }) = delta;
-                    let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
-                    let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
                     let cursor_position =
-                        Point::new(x_scaler.invert(position.x), y_scaler.invert(position.y));
-                    let circle_position = Point::new(
-                        self.position.x + state.current_offset.x,
-                        self.position.y + state.current_offset.y,
-                    );
-                    let cursor_to_circle = cursor_position - circle_position;
-                    if y > 0.0 {
-                        state.scale = state.scale * (1.0 + 0.1);
-                        state.current_offset = Point::new(
-                            state.current_offset.x + cursor_to_circle.x * (1.0 + 0.1),
-                            state.current_offset.y + cursor_to_circle.y * (1.0 + 0.1),
-                        );
+                        Vector::new(x_scaler.invert(position.x), y_scaler.invert(position.y));
+
+                    let previous_scale = state.scale;
+                    state.scale = if y > 0.0 {
+                        state.scale * (1.0 + 0.1)
                     } else {
-                        state.scale = state.scale / (1.0 + 0.1);
-                        state.current_offset = Point::new(
-                            state.current_offset.x + cursor_to_circle.x / (1.0 + 0.1),
-                            state.current_offset.y + cursor_to_circle.y / (1.0 + 0.1),
-                        );
+                        state.scale / (1.0 + 0.1)
                     };
+
+                    let factor = state.scale / previous_scale - 1.0;
+
+                    let adjustment =
+                        (self.position + state.current_offset - cursor_position) * factor;
+
+                    state.current_offset = state.current_offset + adjustment;
                 }
-                if is_inside_circle(position, bounds.center(), self.total_radius(&state.scale)) {
+                let circle_position = self.position + state.current_offset;
+                if is_inside_circle(
+                    position,
+                    Point::new(
+                        x_scaler.apply(circle_position.x),
+                        y_scaler.apply(circle_position.y),
+                    ),
+                    self.total_radius(&state.scale),
+                ) {
                     state.fill_color = Some(self.fill_color.scale_alpha(0.5));
-                    println!("current position: {:?}", position);
                     (
                         canvas::event::Status::Captured,
                         Some(Message::CursorMoved(position)),
@@ -186,7 +190,7 @@ impl App {
 
     fn view(&self) -> Element<'_, Message> {
         let circle = Circle {
-            position: Point::new(0.5, 0.5),
+            position: Vector::new(0.5, 0.5),
             radius: 30.,
             border_radius: 3.,
             fill_color: Theme::Dark.palette().primary,
