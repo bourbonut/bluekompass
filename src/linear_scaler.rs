@@ -1,5 +1,9 @@
 use std::f32::NAN;
 
+use iced::Point;
+use iced::Rectangle;
+use iced::Vector;
+
 enum Normalizer {
     Constant(f32),
     Linear { a: f32, b: f32 },
@@ -86,6 +90,27 @@ impl LinearScaler {
 
     pub fn invert(&self, x: f32) -> f32 {
         self.input.apply(x)
+    }
+}
+
+pub struct LinearScaler2D {
+    pub x_scaler: LinearScaler,
+    pub y_scaler: LinearScaler,
+}
+
+impl LinearScaler2D {
+    pub fn new(bounds: Rectangle) -> Self {
+        Self {
+            x_scaler: LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]),
+            y_scaler: LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]),
+        }
+    }
+    pub fn apply(&self, v: Vector<f32>) -> Point<f32> {
+        Point::new(self.x_scaler.apply(v.x), self.y_scaler.apply(v.y))
+    }
+
+    pub fn invert(&self, p: Point<f32>) -> Vector<f32> {
+        Vector::new(self.x_scaler.invert(p.x), self.y_scaler.invert(p.y))
     }
 }
 

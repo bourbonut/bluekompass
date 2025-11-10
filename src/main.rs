@@ -14,7 +14,7 @@ use iced::widget::Container;
 use iced::widget::canvas;
 
 mod linear_scaler;
-use linear_scaler::LinearScaler;
+use linear_scaler::LinearScaler2D;
 
 trait IntoVec2 {
     fn into_vec2(self) -> Vec2;
@@ -87,15 +87,11 @@ impl canvas::Program<Message> for Circle {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // We prepare a new `Frame`
-        let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
-        let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
+        let scaler = LinearScaler2D::new(bounds);
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
         // We create a `Path` representing a simple circle
-        let circle_position = Point::new(
-            x_scaler.apply(self.position.x + state.current_offset.x),
-            y_scaler.apply(self.position.y + state.current_offset.y),
-        );
+        let circle_position = scaler.apply(self.position + state.current_offset);
         let filled_circle = canvas::Path::circle(circle_position, self.radius * state.scale);
         let border_circle = canvas::Path::circle(
             circle_position,
@@ -125,13 +121,11 @@ impl canvas::Program<Message> for Circle {
     ) -> (canvas::event::Status, Option<Message>) {
         match cursor.position() {
             Some(position) => {
-                let x_scaler = LinearScaler::new(&[0., 1.], &[bounds.x, bounds.width]);
-                let y_scaler = LinearScaler::new(&[0., 1.], &[bounds.y, bounds.height]);
+                let scaler = LinearScaler2D::new(bounds);
                 if let canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
                     let (mouse::ScrollDelta::Lines { y, .. }
                     | mouse::ScrollDelta::Pixels { y, .. }) = delta;
-                    let cursor_position =
-                        Vector::new(x_scaler.invert(position.x), y_scaler.invert(position.y));
+                    let cursor_position = scaler.invert(position);
 
                     let previous_scale = state.scale;
                     state.scale = if y > 0.0 {
@@ -147,13 +141,9 @@ impl canvas::Program<Message> for Circle {
 
                     state.current_offset = state.current_offset + adjustment;
                 }
-                let circle_position = self.position + state.current_offset;
                 if is_inside_circle(
                     position,
-                    Point::new(
-                        x_scaler.apply(circle_position.x),
-                        y_scaler.apply(circle_position.y),
-                    ),
+                    scaler.apply(self.position + state.current_offset),
                     self.total_radius(&state.scale),
                 ) {
                     state.fill_color = Some(self.fill_color.scale_alpha(0.5));
