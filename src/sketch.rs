@@ -1,11 +1,11 @@
 use crate::Message;
-use iced::advanced::mouse;
-use iced::widget::canvas;
 use iced::Point;
 use iced::Rectangle;
 use iced::Renderer;
 use iced::Theme;
 use iced::Vector;
+use iced::advanced::mouse;
+use iced::widget::canvas;
 
 enum Shape {
     Circle {
@@ -41,13 +41,14 @@ enum Pending {
     CircleTwoPoints(usize, usize),
 }
 
-struct Sketch {
+#[derive(Default)]
+pub struct Sketch {
     shapes: Vec<Shape>,
     pending: Vec<Pending>,
     points: Vec<Point>,
 }
 
-struct State {
+pub struct State {
     current_offset: Vector<f32>,
     starting_offset: Vector<f32>,
     cursor_grabbed_at: Option<Vector<f32>>,
