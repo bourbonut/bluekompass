@@ -16,4 +16,4 @@ Bluekompass is a small project to allow extracting shapes from images.
 [Source](https://docs.rs/rfd/0.15.4/rfd/#gtk-backend)
 
 > [!NOTE]
-> `shapes` is a [worktree](https://git-scm.com/docs/git-worktree).
+> `sketch` is a [worktree](https://git-scm.com/docs/git-worktree).
