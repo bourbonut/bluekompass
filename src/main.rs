@@ -12,9 +12,6 @@ use iced::widget::Canvas;
 use iced::widget::Container;
 use iced::widget::canvas;
 
-mod linear_scaler;
-use linear_scaler::LinearScaler2D;
-
 #[derive(Debug, Clone)]
 enum Message {
     CursorMoved(Point),
@@ -80,12 +77,13 @@ impl canvas::Program<Message> for Circle {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // We prepare a new `Frame`
-        let scaler = LinearScaler2D::new(bounds);
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
         // We create a `Path` representing a simple circle
-        // let circle_position = scaler.apply(self.position + state.current_offset);
-        let circle_position = scaler.apply(self.position + state.current_offset);
+        let circle_position = Point::new(
+            self.position.x + state.current_offset.x,
+            self.position.y + state.current_offset.y,
+        );
         let filled_circle = canvas::Path::circle(circle_position, self.radius * state.scale);
         let border_circle = canvas::Path::circle(
             circle_position,
@@ -110,13 +108,12 @@ impl canvas::Program<Message> for Circle {
         &self,
         state: &mut Self::State,
         event: canvas::Event,
-        bounds: Rectangle,
+        _bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
         match cursor.position() {
             Some(position) => {
-                let scaler = LinearScaler2D::new(bounds);
-                let cursor_position = scaler.invert(position);
+                let cursor_position = Vector::new(position.x, position.y);
                 match event {
                     canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
                         let (mouse::ScrollDelta::Lines { y, .. }
@@ -145,7 +142,7 @@ impl canvas::Program<Message> for Circle {
                     }
                     canvas::Event::Mouse(mouse::Event::CursorMoved { position }) => {
                         if let Some(origin) = state.cursor_grabbed_at {
-                            let delta = origin - scaler.invert(position);
+                            let delta = origin - Vector::new(position.x, position.y);
 
                             state.current_offset = Vector::new(
                                 state.starting_offset.x - delta.x,
@@ -157,7 +154,10 @@ impl canvas::Program<Message> for Circle {
                 }
                 if is_inside_circle(
                     position,
-                    scaler.apply(self.position + state.current_offset),
+                    Point::new(
+                        self.position.x + state.current_offset.x,
+                        self.position.y + state.current_offset.y,
+                    ),
                     self.total_radius(&state.scale),
                 ) {
                     state.fill_color = Some(self.fill_color.scale_alpha(0.5));
@@ -194,7 +194,7 @@ impl App {
 
     fn view(&self) -> Element<'_, Message> {
         let circle = Circle {
-            position: Vector::new(0.5, 0.5),
+            position: Vector::new(100., 100.),
             radius: 30.,
             border_radius: 3.,
             fill_color: Theme::Dark.palette().primary,
