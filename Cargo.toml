@@ -9,5 +9,5 @@ rfd = "0.15.4"
 
 [workspace]
 members = [
-    "shapes",
+    "sketch",
 ]
