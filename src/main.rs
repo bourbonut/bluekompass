@@ -10,6 +10,7 @@ use sketch::Sketch;
 #[derive(Debug)]
 enum Message {
     PendingPoint(Point),
+    ChangeMode(Mode),
 }
 
 #[derive(Default)]
@@ -17,7 +18,7 @@ struct App {
     sketch: Sketch,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Mode {
     Pan,
     ThreePointsCircle,
@@ -33,15 +34,11 @@ impl App {
     fn update(&mut self, message: Message) {
         match message {
             Message::PendingPoint(point) => self.sketch.add_point(point),
+            Message::ChangeMode(mode) => self.sketch.change_mode(mode),
         };
     }
 
     fn view(&self) -> Element<'_, Message> {
-        // sketch.shapes.push(sketch::Shape::Circle {
-        //     center: iced::Point::new(100., 100.),
-        //     radius: 10.,
-        //     points: [0; 3],
-        // });
         Container::new(Container::new(
             Canvas::new(self.sketch.clone())
                 .width(Length::Fill)

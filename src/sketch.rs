@@ -172,6 +172,18 @@ impl canvas::Program<Message> for Sketch {
 
                     state.current_offset = state.current_offset + adjustment;
                 }
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) => {
+                    match self.mode {
+                        Mode::Pan => {
+                            message = Some(Message::ChangeMode(Mode::ThreePointsCircle));
+                            status = canvas::event::Status::Captured;
+                        }
+                        Mode::ThreePointsCircle => {
+                            message = Some(Message::ChangeMode(Mode::Pan));
+                            status = canvas::event::Status::Captured;
+                        }
+                    }
+                }
                 canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     match self.mode {
                         Mode::Pan => {
@@ -239,6 +251,10 @@ impl Sketch {
                 println!("3 - Shape {:?}", self.shapes[0]);
             }
         }
+    }
+
+    pub fn change_mode(&mut self, mode: Mode) {
+        self.mode = mode;
     }
 }
 
