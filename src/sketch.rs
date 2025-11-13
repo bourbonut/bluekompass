@@ -128,9 +128,8 @@ impl canvas::Program<Message> for Sketch {
                 point.x * state.scale + state.current_offset.x,
                 point.y * state.scale + state.current_offset.y,
             );
-            let filled_circle = canvas::Path::circle(circle_position, POINT_RADIUS * state.scale);
-            let border_circle =
-                canvas::Path::circle(circle_position, POINT_RADIUS * state.scale + BORDER_RADIUS);
+            let filled_circle = canvas::Path::circle(circle_position, POINT_RADIUS);
+            let border_circle = canvas::Path::circle(circle_position, POINT_RADIUS + BORDER_RADIUS);
 
             // And fill it with some color
             frame.fill(&border_circle, theme.palette().text);
