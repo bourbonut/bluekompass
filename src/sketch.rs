@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use crate::Message;
 use crate::Mode;
 use glam::Vec2;
@@ -16,6 +14,7 @@ static BORDER_RADIUS: f32 = 2.;
 static POINT_RADIUS: f32 = 7.;
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub enum Shape {
     Circle {
         center: Point<f32>,
@@ -60,10 +59,10 @@ impl Default for Pending {
 
 #[derive(Clone, Default)]
 pub struct Sketch {
-    pub shapes: Vec<Shape>,
-    pub pending: Pending,
-    pub points: Vec<Point>,
-    pub mode: Mode,
+    shapes: Vec<Shape>,
+    pending: Pending,
+    points: Vec<Point>,
+    mode: Mode,
 }
 
 pub struct State {
@@ -85,10 +84,6 @@ impl Default for State {
         }
     }
 }
-
-// Two bugs to fix:
-// * when adding a point, the scale factor and the offset have to be taken into account
-// * the three points don't match the borderline of the circles when zoom in / out
 
 // Then, we implement the `Program` trait
 impl canvas::Program<Message> for Sketch {
@@ -113,8 +108,8 @@ impl canvas::Program<Message> for Sketch {
                     points: _,
                 } => {
                     let circle_position = Point::new(
-                        center.x + state.current_offset.x,
-                        center.y + state.current_offset.y,
+                        center.x * state.scale + state.current_offset.x,
+                        center.y * state.scale + state.current_offset.y,
                     );
                     let circle = canvas::Path::circle(circle_position, radius * state.scale);
 
@@ -130,8 +125,8 @@ impl canvas::Program<Message> for Sketch {
 
         for point in self.points.iter() {
             let circle_position = Point::new(
-                point.x + state.current_offset.x,
-                point.y + state.current_offset.y,
+                point.x * state.scale + state.current_offset.x,
+                point.y * state.scale + state.current_offset.y,
             );
             let filled_circle = canvas::Path::circle(circle_position, POINT_RADIUS * state.scale);
             let border_circle =
@@ -200,7 +195,10 @@ impl canvas::Program<Message> for Sketch {
                         }
                         Mode::ThreePointsCircle => {
                             status = canvas::event::Status::Captured;
-                            message = Some(Message::PendingPoint(position));
+                            message = Some(Message::PendingPoint(Point::new(
+                                (position.x - state.current_offset.x) / state.scale,
+                                (position.y - state.current_offset.y) / state.scale,
+                            )));
                         }
                     }
                 }
