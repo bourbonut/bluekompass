@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::Message;
 use crate::Mode;
 use glam::Vec2;
@@ -8,6 +10,7 @@ use iced::Theme;
 use iced::Vector;
 use iced::advanced::mouse;
 use iced::widget::canvas;
+use iced::widget::canvas::Stroke;
 
 static BORDER_RADIUS: f32 = 2.;
 static POINT_RADIUS: f32 = 7.;
@@ -83,6 +86,10 @@ impl Default for State {
     }
 }
 
+// Two bugs to fix:
+// * when adding a point, the scale factor and the offset have to be taken into account
+// * the three points don't match the borderline of the circles when zoom in / out
+
 // Then, we implement the `Program` trait
 impl canvas::Program<Message> for Sketch {
     // No internal state
@@ -109,13 +116,14 @@ impl canvas::Program<Message> for Sketch {
                         center.x + state.current_offset.x,
                         center.y + state.current_offset.y,
                     );
-                    let filled_circle = canvas::Path::circle(circle_position, radius * state.scale);
-                    let border_circle =
-                        canvas::Path::circle(circle_position, radius * state.scale + BORDER_RADIUS);
+                    let circle = canvas::Path::circle(circle_position, radius * state.scale);
 
-                    // And fill it with some color
-                    frame.fill(&border_circle, theme.palette().text);
-                    frame.fill(&filled_circle, theme.palette().primary);
+                    frame.stroke(
+                        &circle,
+                        Stroke::default()
+                            .with_color(theme.palette().text)
+                            .with_width(BORDER_RADIUS),
+                    );
                 }
             }
         }
