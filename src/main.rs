@@ -30,6 +30,9 @@ impl Default for Mode {
     }
 }
 
+// TODO: In order to avoid Clone traits everywhere (especially when doing `sketch.clone()`), App
+// structure should keep all important information and `Sketch` should only receive a `Vec<Shape>`.
+
 impl App {
     fn update(&mut self, message: Message) {
         match message {
