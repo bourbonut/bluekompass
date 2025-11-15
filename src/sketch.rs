@@ -1,0 +1,176 @@
+use crate::shapes;
+use crate::Message;
+use crate::Mode;
+use iced::advanced::mouse;
+use iced::widget::canvas;
+use iced::widget::canvas::Stroke;
+use iced::Point;
+use iced::Rectangle;
+use iced::Renderer;
+use iced::Theme;
+use iced::Vector;
+
+pub struct Sketch<'a> {
+    shapes: &'a Vec<shapes::Shape>,
+    points: &'a Vec<Point>,
+    mode: &'a Mode,
+}
+
+impl<'a> Sketch<'a> {
+    pub fn new(shapes: &'a Vec<shapes::Shape>, points: &'a Vec<Point>, mode: &'a Mode) -> Self {
+        Self {
+            shapes,
+            points,
+            mode,
+        }
+    }
+}
+
+pub struct State {
+    current_offset: Vector<f32>,
+    starting_offset: Vector<f32>,
+    cursor_grabbed_at: Option<Vector<f32>>,
+    scale: f32,
+    hovered: Option<usize>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            current_offset: Vector::new(0., 0.),
+            starting_offset: Vector::new(0., 0.),
+            cursor_grabbed_at: None,
+            scale: 1.0,
+            hovered: None,
+        }
+    }
+}
+
+impl<'a> canvas::Program<Message> for Sketch<'a> {
+    // No internal state
+    type State = State;
+
+    fn draw(
+        &self,
+        state: &Self::State,
+        renderer: &Renderer,
+        theme: &Theme,
+        bounds: Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<canvas::Geometry> {
+        let mut frame = canvas::Frame::new(renderer, bounds.size());
+
+        for shape in self.shapes.iter() {
+            match shape {
+                shapes::Shape::Circle { center, radius } => {
+                    let circle_position = Point::new(
+                        center.x * state.scale + state.current_offset.x,
+                        center.y * state.scale + state.current_offset.y,
+                    );
+                    let circle = canvas::Path::circle(circle_position, radius * state.scale);
+
+                    frame.stroke(
+                        &circle,
+                        Stroke::default()
+                            .with_color(theme.palette().text)
+                            .with_width(shapes::BORDER_RADIUS),
+                    );
+                }
+            }
+        }
+
+        for point in self.points.iter() {
+            let circle_position = Point::new(
+                point.x * state.scale + state.current_offset.x,
+                point.y * state.scale + state.current_offset.y,
+            );
+            let filled_circle = canvas::Path::circle(circle_position, shapes::POINT_RADIUS);
+            let border_circle = canvas::Path::circle(
+                circle_position,
+                shapes::POINT_RADIUS + shapes::BORDER_RADIUS,
+            );
+
+            // And fill it with some color
+            frame.fill(&border_circle, theme.palette().text);
+            frame.fill(&filled_circle, theme.palette().primary);
+        }
+
+        // Then, we produce the geometry
+        vec![frame.into_geometry()]
+    }
+
+    fn update(
+        &self,
+        state: &mut Self::State,
+        event: canvas::Event,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> (canvas::event::Status, Option<Message>) {
+        let mut message = None;
+        let mut status = canvas::event::Status::Ignored;
+        if let Some(position) = cursor.position() {
+            let cursor_position = Vector::new(position.x, position.y);
+            match event {
+                canvas::Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
+                    let (mouse::ScrollDelta::Lines { y, .. }
+                    | mouse::ScrollDelta::Pixels { y, .. }) = delta;
+
+                    let previous_scale = state.scale;
+                    state.scale = if y > 0.0 {
+                        state.scale * (1.0 + 0.1)
+                    } else {
+                        state.scale / (1.0 + 0.1)
+                    };
+
+                    let factor = state.scale / previous_scale - 1.0;
+
+                    let center = {
+                        let center = bounds.center();
+                        Vector::new(center.x, center.y)
+                    };
+
+                    let adjustment = (center + state.current_offset - cursor_position) * factor;
+
+                    state.current_offset = state.current_offset + adjustment;
+                }
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    match self.mode {
+                        Mode::Selection => {
+                            state.cursor_grabbed_at = Some(cursor_position);
+                            state.starting_offset = state.current_offset;
+                        }
+                        Mode::Circle => {
+                            status = canvas::event::Status::Captured;
+                            message = Some(Message::PendingPoint(Point::new(
+                                (position.x - state.current_offset.x) / state.scale,
+                                (position.y - state.current_offset.y) / state.scale,
+                            )));
+                        }
+                    }
+                }
+                canvas::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    state.cursor_grabbed_at = None;
+                }
+                canvas::Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                    if let Some(origin) = state.cursor_grabbed_at {
+                        let delta = origin - Vector::new(position.x, position.y);
+
+                        state.current_offset = Vector::new(
+                            state.starting_offset.x - delta.x,
+                            state.starting_offset.y - delta.y,
+                        );
+                    }
+                }
+                _ => (),
+            }
+            for (idx, shape) in self.shapes.iter().enumerate() {
+                if shape.is_inside(&position, &state.current_offset, &state.scale) {
+                    state.hovered = Some(idx);
+                } else {
+                    state.hovered = None;
+                }
+            }
+        }
+        (status, message)
+    }
+}

@@ -5,12 +5,15 @@ use iced::widget::{canvas, Column, Scrollable};
 use iced::window::icon::from_file;
 use iced::{
     widget::{svg::Svg, text, Button, Container, Row, Stack},
-    Element, Length, Theme,
+    Element, Length, Point, Theme,
 };
 use rfd::FileDialog;
 
 mod circle;
 mod color;
+mod maths;
+mod shapes;
+mod sketch;
 mod style;
 mod viewer;
 
@@ -23,9 +26,24 @@ use viewer::Viewer;
 enum Message {
     // EventOccured(Event),
     Button,
+    SelectMode,
+    CircleMode,
+    PendingPoint(Point),
     OpenFileDialog,
     ChangeTheme,
     SelectTheme(usize),
+}
+
+#[derive(Clone)]
+enum Mode {
+    Selection,
+    Circle,
+}
+
+enum Pending {
+    CircleOnePoint(usize),
+    CircleTwoPoints(usize, usize),
+    None,
 }
 
 #[derive(Debug)]
@@ -40,6 +58,11 @@ struct App {
     theme: Theme,
     icons: [Icon; 5],
     status: Status,
+    mode: Mode,
+    pending: Pending,
+    points: Vec<Point>,
+    primitives: Vec<shapes::Primitive>,
+    shapes: Vec<shapes::Shape>,
 }
 
 fn load_icon(file_path: &str) -> String {
@@ -58,12 +81,17 @@ impl Default for App {
                     load_icon("./assets/folder-open.svg"),
                     Message::OpenFileDialog,
                 ),
-                Icon(load_icon("./assets/directional.svg"), Message::Button),
-                Icon(load_icon("./assets/circle.svg"), Message::Button),
+                Icon(load_icon("./assets/directional.svg"), Message::SelectMode),
+                Icon(load_icon("./assets/circle.svg"), Message::CircleMode),
                 Icon(load_icon("./assets/spline.svg"), Message::Button),
                 Icon(load_icon("./assets/palette.svg"), Message::ChangeTheme),
             ],
             status: Status::MainLayout,
+            mode: Mode::Selection,
+            pending: Pending::None,
+            primitives: Vec::new(),
+            points: Vec::new(),
+            shapes: Vec::new(),
         }
     }
 }
@@ -82,10 +110,36 @@ impl App {
             Message::Button => {
                 println!("Button pressed");
             }
+            Message::CircleMode => self.mode = Mode::Circle,
+            Message::SelectMode => self.mode = Mode::Selection,
             Message::SelectTheme(idx) => {
                 self.theme = Theme::ALL.get(idx).unwrap().clone();
                 println!("Selected theme: {:?}", self.theme);
             }
+            Message::PendingPoint(point) => match self.pending {
+                Pending::None => {
+                    self.pending = Pending::CircleOnePoint(self.points.len());
+                    self.points.push(point);
+                    println!("1 - Pending point {}", point);
+                }
+                Pending::CircleOnePoint(i1) => {
+                    self.pending = Pending::CircleTwoPoints(i1, self.points.len());
+                    self.points.push(point);
+                    println!("2 - Pending point {}", point);
+                }
+                Pending::CircleTwoPoints(i1, i2) => {
+                    self.pending = Pending::None;
+                    let center =
+                        maths::compute_circle_center(&point, &self.points[i1], &self.points[i2]);
+                    let i3 = self.points.len();
+                    self.points.push(point);
+                    let radius = maths::compute_circle_radius(&center, &point);
+                    let points = [i1, i2, i3];
+                    self.primitives.push(shapes::Primitive::Circle { points });
+                    self.shapes.push(shapes::Shape::Circle { center, radius });
+                    println!("3 - Shape {:?}", self.shapes[0]);
+                }
+            },
             Message::ChangeTheme => {
                 match self.status {
                     Status::ChangeThemeLayout => {
@@ -106,8 +160,13 @@ impl App {
 
     fn view(&self) -> Element<'_, Message> {
         Stack::with_children(match self.status {
-            Status::MainLayout => vec![self.viewer(), self.tools()],
-            Status::ChangeThemeLayout => vec![self.viewer(), self.tools(), self.available_theme()],
+            Status::MainLayout => vec![self.viewer(), self.sketch(), self.tools()],
+            Status::ChangeThemeLayout => vec![
+                self.viewer(),
+                self.sketch(),
+                self.tools(),
+                self.available_theme(),
+            ],
         })
         .width(Length::Shrink)
         .into()
@@ -116,6 +175,13 @@ impl App {
     /// Creates a viewer where the image is drawn
     fn viewer(&self) -> Element<'_, Message> {
         Viewer::new("./assets/front.png")
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    fn sketch(&self) -> Element<'_, Message> {
+        canvas::Canvas::new(sketch::Sketch::new(&self.shapes, &self.points, &self.mode))
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
@@ -202,6 +268,7 @@ fn main() -> iced::Result {
             ),
             ..Default::default()
         })
+        .antialiasing(true)
         // .subscription(App::subscription) // For events (mouse, keyboard, ...)
         .run()
 }
