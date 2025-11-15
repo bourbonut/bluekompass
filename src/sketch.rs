@@ -14,6 +14,8 @@ pub struct Sketch<'a> {
     shapes: &'a Vec<shapes::Shape>,
     points: &'a Vec<Point>,
     mode: &'a Mode,
+    min_scale: f32,
+    max_scale: f32,
 }
 
 impl<'a> Sketch<'a> {
@@ -22,6 +24,8 @@ impl<'a> Sketch<'a> {
             shapes,
             points,
             mode,
+            min_scale: 0.25,
+            max_scale: 10.0,
         }
     }
 }
@@ -103,7 +107,7 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
         &self,
         state: &mut Self::State,
         event: canvas::Event,
-        bounds: Rectangle,
+        _bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
         let mut message = None;
@@ -116,22 +120,22 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                     | mouse::ScrollDelta::Pixels { y, .. }) = delta;
 
                     let previous_scale = state.scale;
-                    state.scale = if y > 0.0 {
-                        state.scale * (1.0 + 0.1)
-                    } else {
-                        state.scale / (1.0 + 0.1)
-                    };
 
-                    let factor = state.scale / previous_scale - 1.0;
+                    if y < 0.0 && previous_scale > self.min_scale
+                        || y > 0.0 && previous_scale < self.max_scale
+                    {
+                        state.scale = if y > 0.0 {
+                            state.scale * (1.0 + 0.1)
+                        } else {
+                            state.scale / (1.0 + 0.1)
+                        }
+                        .clamp(self.min_scale, self.max_scale);
 
-                    let center = {
-                        let center = bounds.center();
-                        Vector::new(center.x, center.y)
-                    };
+                        let factor = state.scale / previous_scale;
 
-                    let adjustment = (center + state.current_offset - cursor_position) * factor;
-
-                    state.current_offset = state.current_offset + adjustment;
+                        state.current_offset =
+                            state.current_offset * factor + cursor_position * (1. - factor);
+                    }
                 }
                 canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     match self.mode {

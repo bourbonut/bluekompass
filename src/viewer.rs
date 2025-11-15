@@ -291,6 +291,7 @@ where
 
             image_top_left - state.to_vector()
         };
+        // println!("translation: {:?}", translation);
 
         let drawing_bounds = Rectangle::new(bounds.position(), final_size);
 
