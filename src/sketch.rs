@@ -76,7 +76,7 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                     frame.stroke(
                         &circle,
                         Stroke::default()
-                            .with_color(theme.palette().text)
+                            .with_color(theme.palette().background)
                             .with_width(shapes::BORDER_RADIUS),
                     );
                 }
@@ -95,7 +95,7 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
             );
 
             // And fill it with some color
-            frame.fill(&border_circle, theme.palette().text);
+            frame.fill(&border_circle, theme.palette().background);
             frame.fill(&filled_circle, theme.palette().primary);
         }
 
@@ -107,7 +107,7 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
         &self,
         state: &mut Self::State,
         event: canvas::Event,
-        _bounds: Rectangle,
+        bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> (canvas::event::Status, Option<Message>) {
         let mut message = None;
@@ -138,17 +138,19 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                     }
                 }
                 canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                    match self.mode {
-                        Mode::Selection => {
-                            state.cursor_grabbed_at = Some(cursor_position);
-                            state.starting_offset = state.current_offset;
-                        }
-                        Mode::Circle => {
-                            status = canvas::event::Status::Captured;
-                            message = Some(Message::PendingPoint(Point::new(
-                                (position.x - state.current_offset.x) / state.scale,
-                                (position.y - state.current_offset.y) / state.scale,
-                            )));
+                    if cursor.position_over(bounds).is_some() {
+                        match self.mode {
+                            Mode::Selection => {
+                                state.cursor_grabbed_at = Some(cursor_position);
+                                state.starting_offset = state.current_offset;
+                            }
+                            Mode::Circle => {
+                                status = canvas::event::Status::Captured;
+                                message = Some(Message::PendingPoint(Point::new(
+                                    (position.x - state.current_offset.x) / state.scale,
+                                    (position.y - state.current_offset.y) / state.scale,
+                                )));
+                            }
                         }
                     }
                 }
@@ -156,13 +158,17 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                     state.cursor_grabbed_at = None;
                 }
                 canvas::Event::Mouse(mouse::Event::CursorMoved { position }) => {
-                    if let Some(origin) = state.cursor_grabbed_at {
-                        let delta = origin - Vector::new(position.x, position.y);
+                    if cursor.position_over(bounds).is_some() {
+                        if let Some(origin) = state.cursor_grabbed_at {
+                            let delta = origin - Vector::new(position.x, position.y);
 
-                        state.current_offset = Vector::new(
-                            state.starting_offset.x - delta.x,
-                            state.starting_offset.y - delta.y,
-                        );
+                            state.current_offset = Vector::new(
+                                state.starting_offset.x - delta.x,
+                                state.starting_offset.y - delta.y,
+                            );
+                        }
+                    } else {
+                        state.cursor_grabbed_at = None;
                     }
                 }
                 _ => (),

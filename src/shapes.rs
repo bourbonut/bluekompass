@@ -1,3 +1,4 @@
+use crate::maths;
 use glam::usize;
 use iced::Point;
 use iced::Vector;
@@ -29,5 +30,12 @@ impl Shape {
                 (length_squared(*cursor - center).abs() - radius2) <= 0.
             }
         }
+    }
+}
+
+impl Shape {
+    pub fn circle(a: &Point, b: &Point, c: &Point) -> Shape {
+        let (center, radius) = maths::circle(a, b, c);
+        Shape::Circle { center, radius }
     }
 }

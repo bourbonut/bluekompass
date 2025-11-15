@@ -129,14 +129,12 @@ impl App {
                 }
                 Pending::CircleTwoPoints(i1, i2) => {
                     self.pending = Pending::None;
-                    let center =
-                        maths::compute_circle_center(&point, &self.points[i1], &self.points[i2]);
+                    let shape = shapes::Shape::circle(&point, &self.points[i1], &self.points[i2]);
                     let i3 = self.points.len();
                     self.points.push(point);
-                    let radius = maths::compute_circle_radius(&center, &point);
                     let points = [i1, i2, i3];
                     self.primitives.push(shapes::Primitive::Circle { points });
-                    self.shapes.push(shapes::Shape::Circle { center, radius });
+                    self.shapes.push(shape);
                     println!("3 - Shape {:?}", self.shapes[0]);
                 }
             },

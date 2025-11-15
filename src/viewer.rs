@@ -220,18 +220,27 @@ where
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) => {
                 let state = tree.state.downcast_mut::<State>();
+                if cursor.position_over(bounds).is_some() {
+                    if let Some(origin) = state.cursor_grabbed_at {
+                        let delta = position - origin;
 
-                if let Some(origin) = state.cursor_grabbed_at {
-                    let delta = position - origin;
+                        state.current_offset = Vector::new(
+                            state.starting_offset.x - delta.x,
+                            state.starting_offset.y - delta.y,
+                        );
 
-                    state.current_offset = Vector::new(
-                        state.starting_offset.x - delta.x,
-                        state.starting_offset.y - delta.y,
-                    );
-
-                    event::Status::Captured
+                        event::Status::Captured
+                    } else {
+                        event::Status::Ignored
+                    }
                 } else {
-                    event::Status::Ignored
+                    if state.cursor_grabbed_at.is_some() {
+                        state.cursor_grabbed_at = None;
+
+                        event::Status::Captured
+                    } else {
+                        event::Status::Ignored
+                    }
                 }
             }
             _ => event::Status::Ignored,

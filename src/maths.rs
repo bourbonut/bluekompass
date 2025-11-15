@@ -21,10 +21,7 @@ fn compute_intersection_line_to_line(p1: &Vec2, d1: &Vec2, p2: &Vec2, d2: &Vec2)
     Some(k * *d1 + *p1)
 }
 
-pub fn compute_circle_center(a: &Point, b: &Point, c: &Point) -> Point {
-    let a = point_to_vec2(a);
-    let b = point_to_vec2(b);
-    let c = point_to_vec2(c);
+fn compute_circle_center(a: &Vec2, b: &Vec2, c: &Vec2) -> Vec2 {
     let ab = b - a;
     let bc = c - b;
     let middle_ab = 0.5 * (a + b);
@@ -32,14 +29,21 @@ pub fn compute_circle_center(a: &Point, b: &Point, c: &Point) -> Point {
     if let Some(center) =
         compute_intersection_line_to_line(&middle_ab, &rot90(ab), &middle_bc, &rot90(bc))
     {
-        Point::new(center.x, center.y)
+        center
     } else {
-        Point::new(f32::NAN, f32::NAN)
+        Vec2::NAN
     }
 }
 
-pub fn compute_circle_radius(center: &Point, circle_point: &Point) -> f32 {
-    let center = point_to_vec2(center);
-    let circle_point = point_to_vec2(circle_point);
-    (center - circle_point).length()
+fn compute_circle_radius(center: &Vec2, circle_point: &Vec2) -> f32 {
+    (center - circle_point).length() as f32
+}
+
+pub fn circle(a: &Point, b: &Point, c: &Point) -> (Point, f32) {
+    let a = point_to_vec2(a);
+    let b = point_to_vec2(b);
+    let c = point_to_vec2(c);
+    let center = compute_circle_center(&a, &b, &c);
+    let radius = compute_circle_radius(&center, &a);
+    (Point::new(center.x, center.y), radius)
 }
