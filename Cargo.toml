@@ -8,7 +8,5 @@ glam = "0.30.9"
 iced = { version = "0.13.1", features = ["image", "advanced", "svg", "canvas"] }
 rfd = "0.15.4"
 
-[workspace]
-members = [
-    "sketch",
-]
+# [workspace]
+# members = ["sketch"]
