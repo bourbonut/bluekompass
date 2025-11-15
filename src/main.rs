@@ -3,6 +3,7 @@ use std::{fs, path::PathBuf, str::FromStr};
 use iced::advanced::svg::Handle;
 use iced::widget::{canvas, Column, Scrollable};
 use iced::window::icon::from_file;
+use iced::Padding;
 use iced::{
     widget::{svg::Svg, text, Button, Container, Row, Stack},
     Element, Length, Point, Theme,
@@ -224,7 +225,14 @@ impl App {
             .collect();
         Container::new(
             Container::new(Column::from_vec(vec![
-                text("Available themes").size(14).into(),
+                Container::new(text("Available themes").size(14))
+                    .padding(Padding {
+                        top: 10.,
+                        left: 50.,
+                        bottom: 5.,
+                        right: 0.,
+                    })
+                    .into(),
                 Scrollable::new(Column::from_vec(themes).spacing(5.)).into(),
             ]))
             .height(Length::Fill)
