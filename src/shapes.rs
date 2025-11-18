@@ -21,13 +21,12 @@ fn length_squared(v: Vector) -> f32 {
 }
 
 impl Shape {
-    pub fn is_inside(&self, cursor: &Point, offset: &Vector, scale: &f32) -> bool {
+    pub fn is_hovered(&self, cursor: &Point, offset: &Vector, scale: &f32) -> bool {
         match self {
             Self::Circle { center, radius } => {
-                let center = Point::new(center.x + offset.x, center.y + offset.y);
-                let radius = radius * scale + BORDER_RADIUS;
-                let radius2 = radius * radius;
-                (length_squared(*cursor - center).abs() - radius2) <= 0.
+                let center = Point::new(center.x * scale + offset.x, center.y * scale + offset.y);
+                let radius = radius * scale;
+                (length_squared(*cursor - center).sqrt() - radius).abs() <= BORDER_RADIUS
             }
         }
     }
@@ -38,4 +37,11 @@ impl Shape {
         let (center, radius) = maths::circle(a, b, c);
         Shape::Circle { center, radius }
     }
+}
+
+#[allow(dead_code)]
+pub fn is_point_hovered(cursor: &Point, point: &Point, offset: &Vector, scale: &f32) -> bool {
+    let center = Point::new(point.x * scale + offset.x, point.y * scale + offset.y);
+    let radius = POINT_RADIUS * scale + BORDER_RADIUS;
+    (length_squared(*cursor - center).abs() - radius * radius) <= 0.
 }

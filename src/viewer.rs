@@ -195,25 +195,33 @@ where
 
                 event::Status::Captured
             }
-            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                let Some(cursor_position) = cursor.position_over(bounds) else {
-                    return event::Status::Ignored;
-                };
+            Event::Mouse(mouse::Event::ButtonPressed(button)) => {
+                if button == mouse::Button::Left || button == mouse::Button::Middle {
+                    let Some(cursor_position) = cursor.position_over(bounds) else {
+                        return event::Status::Ignored;
+                    };
 
-                let state = tree.state.downcast_mut::<State>();
+                    let state = tree.state.downcast_mut::<State>();
 
-                state.cursor_grabbed_at = Some(cursor_position);
-                state.starting_offset = state.current_offset;
-
-                event::Status::Captured
-            }
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-                let state = tree.state.downcast_mut::<State>();
-
-                if state.cursor_grabbed_at.is_some() {
-                    state.cursor_grabbed_at = None;
+                    state.cursor_grabbed_at = Some(cursor_position);
+                    state.starting_offset = state.current_offset;
 
                     event::Status::Captured
+                } else {
+                    event::Status::Ignored
+                }
+            }
+            Event::Mouse(mouse::Event::ButtonReleased(button)) => {
+                if button == mouse::Button::Left || button == mouse::Button::Middle {
+                    let state = tree.state.downcast_mut::<State>();
+
+                    if state.cursor_grabbed_at.is_some() {
+                        state.cursor_grabbed_at = None;
+
+                        event::Status::Captured
+                    } else {
+                        event::Status::Ignored
+                    }
                 } else {
                     event::Status::Ignored
                 }
@@ -262,7 +270,7 @@ where
         if state.is_cursor_grabbed() {
             mouse::Interaction::Grabbing
         } else if is_mouse_over {
-            mouse::Interaction::Grab
+            mouse::Interaction::Crosshair
         } else {
             mouse::Interaction::None
         }

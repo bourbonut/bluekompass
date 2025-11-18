@@ -36,6 +36,7 @@ pub struct State {
     cursor_grabbed_at: Option<Vector<f32>>,
     scale: f32,
     hovered: Option<usize>,
+    previous_mode: Mode,
 }
 
 impl Default for State {
@@ -46,6 +47,7 @@ impl Default for State {
             cursor_grabbed_at: None,
             scale: 1.0,
             hovered: None,
+            previous_mode: Mode::Selection,
         }
     }
 }
@@ -63,8 +65,9 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         let mut frame = canvas::Frame::new(renderer, bounds.size());
+        let hovered_index = state.hovered;
 
-        for shape in self.shapes.iter() {
+        for (i, shape) in self.shapes.iter().enumerate() {
             match shape {
                 shapes::Shape::Circle { center, radius } => {
                     let circle_position = Point::new(
@@ -76,7 +79,11 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                     frame.stroke(
                         &circle,
                         Stroke::default()
-                            .with_color(theme.palette().background)
+                            .with_color(if Some(i) == hovered_index {
+                                theme.palette().primary
+                            } else {
+                                theme.palette().background
+                            })
                             .with_width(shapes::BORDER_RADIUS),
                     );
                 }
@@ -137,6 +144,18 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                             state.current_offset * factor + cursor_position * (1. - factor);
                     }
                 }
+                canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) => {
+                    if cursor.position_over(bounds).is_some() {
+                        state.cursor_grabbed_at = Some(cursor_position);
+                        state.starting_offset = state.current_offset;
+                        state.previous_mode = self.mode.clone();
+                        message = Some(Message::ChangeMode(Mode::Selection));
+                    }
+                }
+                canvas::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) => {
+                    state.cursor_grabbed_at = None;
+                    message = Some(Message::ChangeMode(state.previous_mode.clone()));
+                }
                 canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                     if cursor.position_over(bounds).is_some() {
                         match self.mode {
@@ -174,7 +193,7 @@ impl<'a> canvas::Program<Message> for Sketch<'a> {
                 _ => (),
             }
             for (idx, shape) in self.shapes.iter().enumerate() {
-                if shape.is_inside(&position, &state.current_offset, &state.scale) {
+                if shape.is_hovered(&position, &state.current_offset, &state.scale) {
                     state.hovered = Some(idx);
                 } else {
                     state.hovered = None;

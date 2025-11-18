@@ -27,15 +27,14 @@ use viewer::Viewer;
 enum Message {
     // EventOccured(Event),
     Button,
-    SelectMode,
-    CircleMode,
     PendingPoint(Point),
+    ChangeMode(Mode),
     OpenFileDialog,
     ChangeTheme,
     SelectTheme(usize),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum Mode {
     Selection,
     Circle,
@@ -82,8 +81,14 @@ impl Default for App {
                     load_icon("./assets/folder-open.svg"),
                     Message::OpenFileDialog,
                 ),
-                Icon(load_icon("./assets/directional.svg"), Message::SelectMode),
-                Icon(load_icon("./assets/circle.svg"), Message::CircleMode),
+                Icon(
+                    load_icon("./assets/directional.svg"),
+                    Message::ChangeMode(Mode::Selection),
+                ),
+                Icon(
+                    load_icon("./assets/circle.svg"),
+                    Message::ChangeMode(Mode::Circle),
+                ),
                 Icon(load_icon("./assets/spline.svg"), Message::Button),
                 Icon(load_icon("./assets/palette.svg"), Message::ChangeTheme),
             ],
@@ -111,22 +116,18 @@ impl App {
             Message::Button => {
                 println!("Button pressed");
             }
-            Message::CircleMode => self.mode = Mode::Circle,
-            Message::SelectMode => self.mode = Mode::Selection,
+            Message::ChangeMode(mode) => self.mode = mode,
             Message::SelectTheme(idx) => {
                 self.theme = Theme::ALL.get(idx).unwrap().clone();
-                println!("Selected theme: {:?}", self.theme);
             }
             Message::PendingPoint(point) => match self.pending {
                 Pending::None => {
                     self.pending = Pending::CircleOnePoint(self.points.len());
                     self.points.push(point);
-                    println!("1 - Pending point {}", point);
                 }
                 Pending::CircleOnePoint(i1) => {
                     self.pending = Pending::CircleTwoPoints(i1, self.points.len());
                     self.points.push(point);
-                    println!("2 - Pending point {}", point);
                 }
                 Pending::CircleTwoPoints(i1, i2) => {
                     self.pending = Pending::None;
@@ -136,7 +137,6 @@ impl App {
                     let points = [i1, i2, i3];
                     self.primitives.push(shapes::Primitive::Circle { points });
                     self.shapes.push(shape);
-                    println!("3 - Shape {:?}", self.shapes[0]);
                 }
             },
             Message::ChangeTheme => {
@@ -148,7 +148,6 @@ impl App {
                         self.status = Status::ChangeThemeLayout;
                     }
                 };
-                println!("Current status: {:?}", self.status);
             }
         }
     }
